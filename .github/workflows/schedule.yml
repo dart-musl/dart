@@ -1,0 +1,82 @@
+name: schedule
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  latest:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [stable, beta, dev]
+
+    outputs:
+      stable-version: ${{ steps.version.outputs.stable-version }}
+      stable-cache-hit: ${{ steps.cache.outputs.stable-cache-hit }}
+      beta-version: ${{ steps.version.outputs.beta-version }}
+      beta-cache-hit: ${{ steps.cache.outputs.beta-cache-hit }}
+      dev-version: ${{ steps.version.outputs.dev-version }}
+      dev-cache-hit: ${{ steps.cache.outputs.dev-cache-hit }}
+
+    steps:
+      - name: Get ${{ matrix.channel }} release
+        run: |
+          curl -fsSL "https://storage.googleapis.com/dart-archive/channels/${{ matrix.channel }}/release/latest/VERSION" | tee -a VERSION
+
+      - name: Get ${{ matrix.channel }} version
+        id: version
+        run: |
+          echo "${{ matrix.channel }}-version=$(yq .version VERSION)" | tee -a $GITHUB_OUTPUT
+
+      - name: Cache
+        id: cache
+        run: |
+          if ${{ github.event.schedule && 'true' || 'false' }} && curl -fsSLo /dev/null "${{ github.server_url }}/${{ github.repository }}/releases/tag/$(yq .version VERSION)"; then
+            echo "${{ matrix.channel }}-cache-hit=true" | tee -a $GITHUB_OUTPUT
+          else
+            echo "${{ matrix.channel }}-cache-hit=false" | tee -a $GITHUB_OUTPUT
+          fi
+
+  stable:
+    needs: [latest]
+    if: needs.latest.outputs.stable-cache-hit != 'true'
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ needs.latest.outputs.stable-version }}
+    secrets: inherit
+
+  beta:
+    needs: [latest]
+    if: needs.latest.outputs.beta-cache-hit != 'true' && needs.latest.outputs.beta-version != needs.latest.outputs.stable-version
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ needs.latest.outputs.beta-version }}
+    secrets: inherit
+
+  dev:
+    needs: [latest]
+    if: needs.latest.outputs.dev-cache-hit != 'true' && needs.latest.outputs.dev-version != needs.latest.outputs.beta-version && needs.latest.outputs.dev-version != needs.latest.outputs.stable-version
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: ${{ needs.latest.outputs.dev-version }}
+    secrets: inherit
+
+  main:
+    needs: [latest]
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: main

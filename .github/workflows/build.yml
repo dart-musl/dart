@@ -1,0 +1,257 @@
+name: build
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Dart SDK git ref
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Dart SDK git ref
+        required: true
+        type: string
+        default: main
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+
+    container:
+      image: docker.io/library/debian
+
+    outputs:
+      checked-in-sdk-version: ${{ steps.fetch.outputs.version }}
+
+    steps:
+      - name: Install build tools
+        run: |
+          apt-get update
+          apt-get install --no-install-recommends -y ca-certificates curl git python3
+
+      - name: Fetch Dart SDK
+        id: fetch
+        run: |
+          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+          export DEPOT_TOOLS_UPDATE=0 PATH=$PWD/depot_tools:$PATH
+
+          mkdir dart-sdk
+          cd dart-sdk
+          gclient config --name sdk https://dart.googlesource.com/sdk.git@${{ inputs.ref }}
+          gclient sync --no-history --nohooks
+          python3 sdk/tools/generate_package_config.py
+          python3 sdk/tools/generate_sdk_version_file.py
+
+          cd sdk
+          gclient getdep --var sdk_tag | tr : = | tee -a $GITHUB_OUTPUT
+
+      - name: Patch Dart SDK 2.19
+        if: startsWith(inputs.ref, '2.19.')
+        run: |
+          cd dart-sdk/sdk
+          xargs -n 1 -- sh -xc 'curl -fsSL "https://github.com/dart-lang/sdk/commit/$1.diff" | git apply -' -- <<'EOF'
+          afe921902609e95e5050dad1fe82d2a69bcdcf95
+          4486a3f45dc40aa8ab1357db38da465c5899631f
+          EOF
+
+      - name: Remove build tools
+        run: |
+          cd dart-sdk/sdk
+          rm -rf buildtools
+          mkdir -p buildtools/ninja
+          ln -s /usr/bin/gn buildtools/gn
+          ln -s /usr/bin/ninja buildtools/ninja/ninja
+
+      - name: Remove Checked-in SDK
+        run: |
+          cd dart-sdk/sdk
+          rm -rf tools/sdks/dart-sdk
+
+      - name: Archive
+        run: |
+          python3 dart-sdk/sdk/tools/linux_dist_support/create_tarball.py --tar_filename dart-${{ inputs.ref }}.tar.gz
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: dart-${{ inputs.ref }}
+          path: dart-${{ inputs.ref }}.tar.gz
+          if-no-files-found: error
+
+  bootstrap:
+    needs: [archive]
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: docker.io/library/debian
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host-arch: x64
+            target-arch: x64
+
+    steps:
+      - name: Install build tools
+        run: |
+          apt-get update
+          apt-get install --no-install-recommends -y ca-certificates curl git python3 xz-utils
+
+      - name: Download Dart SDK
+        id: download
+        run: |
+          if curl -fsSLO ${{ github.server_url }}/${{ github.repository }}/releases/download/${{ needs.archive.outputs.checked-in-sdk-version }}/dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz; then
+            echo "cache-hit=true" | tee -a $GITHUB_OUTPUT
+          else
+            echo "cache-hit=false" | tee -a $GITHUB_OUTPUT
+          fi
+
+      - name: Fetch Dart SDK
+        if: steps.download.outputs.cache-hit != 'true'
+        run: |
+          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+          export DEPOT_TOOLS_UPDATE=0 PATH=$PWD/depot_tools:$PATH
+
+          mkdir dart-sdk
+          cd dart-sdk
+          gclient config --name sdk https://dart.googlesource.com/sdk.git@${{ needs.archive.outputs.checked-in-sdk-version }}
+          gclient sync --no-history
+
+      - name: Build
+        if: steps.download.outputs.cache-hit != 'true'
+        run: |
+          cd dart-sdk/sdk
+          ./tools/build.py --no-goma --mode release --arch ${{ matrix.target-arch }} --gn-args 'dart_use_tcmalloc=false' create_sdk
+
+      - name: Archive
+        if: steps.download.outputs.cache-hit != 'true'
+        run: |
+          tar -czf dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz -C dart-sdk/sdk/out/Release* -- dart-sdk
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: dartsdk-linux-${{ matrix.target-arch }}-${{ needs.archive.outputs.checked-in-sdk-version }}@bootstrap-${{ inputs.ref }}
+          path: dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz
+          if-no-files-found: error
+
+  build:
+    needs: [bootstrap, archive]
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: docker.io/library/alpine
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host-arch: x64
+            target-arch: x64
+          - host-arch: x64
+            target-arch: ia32
+          - host-arch: x64
+            target-arch: arm64
+          - host-arch: x64
+            target-arch: arm
+
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: dart-${{ inputs.ref }}
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: dartsdk-linux-${{ matrix.host-arch }}-${{ needs.archive.outputs.checked-in-sdk-version }}@bootstrap-${{ inputs.ref }}
+
+      - name: Unarchive
+        run: |
+          mkdir dart-sdk
+          cd dart-sdk
+          tar -xzf ../dart-${{ inputs.ref }}.tar.gz --strip-components=1
+          mv dart sdk
+          tar -xzf ../dartsdk-linux-${{ matrix.host-arch }}-release.tar.gz -C sdk/tools/sdks
+          rm -f ../*.tar.gz
+
+      - name: Verify Checked-in Dart SDK
+        run: |
+          cd dart-sdk/sdk
+          if ! ./tools/sdks/dart-sdk/bin/dart --version; then
+            apk add --no-cache gcompat
+            ./tools/sdks/dart-sdk/bin/dart --version
+          fi
+
+      - name: Install build tools
+        run: |
+          apk add --no-cache alpine-sdk bash clang curl gn lld llvm python3
+
+      - name: Install sysroot
+        run: |
+          cd dart-sdk/sdk
+          ./build/linux/alpine_sysroot_scripts/install-sysroot.sh
+
+      - name: Setup multiarch musl
+        run: |
+          cd dart-sdk/sdk
+          find build/linux -mindepth 1 -maxdepth 1 -name 'alpine-*-sysroot' -print0 | xargs -0 -n 1 -I {} -- find {}/lib -mindepth 1 -maxdepth 1 \( -name 'ld-musl-*.so.1' -o -name 'libc.musl-*.so.1' \) -print0 | xargs -0 -n 1 -- sh -xc 'cp -u "$1" /lib' --
+
+      - name: Configure tcmalloc
+        run: |
+          apk add --no-cache autoconf automake libtool
+          cd dart-sdk/sdk/third_party/tcmalloc/gperftools
+          ./autogen.sh
+          ./configure --enable-emergency-malloc --enable-frame-pointers --enable-cpu-profiler --disable-heap-checker --disable-debugalloc --enable-sized-delete --disable-libunwind
+          cd ../include
+          find . -type f -print0 | xargs -0 -n 1 -- sh -xc 'cp -f "../gperftools/src/$1" "$1"' --
+
+      - name: Build
+        run: |
+          cd dart-sdk/sdk
+          ./tools/build.py --no-goma --mode release --arch ${{ matrix.target-arch }} --gn-args 'dart_snapshot_kind="app-jit"' --gn-args 'dart_sysroot="alpine"' create_sdk
+
+      - name: Archive
+        run: |
+          tar -czf dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz -C dart-sdk/sdk/out/Release* -- dart-sdk
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: dartsdk-linux-${{ matrix.target-arch }}-${{ inputs.ref }}
+          path: dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz
+          if-no-files-found: error
+
+  tag:
+    needs: [build]
+
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Tag
+        run: |
+          if git ls-remote --exit-code --tags https://dart.googlesource.com/sdk.git "${{ inputs.ref }}"; then
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git config user.name github-actions[bot]
+            if test -n "$(git tag -l ${{ inputs.ref }})"; then
+              echo "Tag ${{ inputs.ref }} has already been created."
+              exit 0
+            fi
+            git tag -m ${{ inputs.ref }} ${{ inputs.ref }}
+            echo "Tagged ${{ inputs.ref }}."
+            git push origin refs/tags/${{ inputs.ref }}
+            echo "Pushed tag ${{ inputs.ref }}."
+          fi
