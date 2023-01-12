@@ -1,0 +1,25 @@
+From 4fd6bf3436de023626d14eceb325904d0ab26943 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=E3=81=AA=E3=81=A4=E3=81=8D?= <i@ntk.me>
+Date: Sat, 14 Jan 2023 02:59:27 +0000
+Subject: [PATCH 6/6] musl-sigsetjmp
+
+---
+ runtime/bin/ffi_test/ffi_test_functions_vmspecific.cc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/runtime/bin/ffi_test/ffi_test_functions_vmspecific.cc b/runtime/bin/ffi_test/ffi_test_functions_vmspecific.cc
+index 0b1972cc..909d3f03 100644
+--- a/runtime/bin/ffi_test/ffi_test_functions_vmspecific.cc
++++ b/runtime/bin/ffi_test/ffi_test_functions_vmspecific.cc
+@@ -217,7 +217,7 @@ intptr_t ExpectAbort(void (*fn)()) {
+   fprintf(stderr, "**** EXPECT STACKTRACE TO FOLLOW. THIS IS OK. ****\n");
+ 
+   struct sigaction old_action = {};
+-  intptr_t result = __sigsetjmp(buf, /*savesigs=*/1);
++  intptr_t result = sigsetjmp(buf, /*savesigs=*/1);
+   if (result == 0) {
+     // Install signal handler.
+     struct sigaction handler = {};
+-- 
+2.39.0
+

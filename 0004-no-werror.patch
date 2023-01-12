@@ -1,0 +1,37 @@
+From 52e1a5cf13676c9b849ad729ad5a7316480c1bdc Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=E3=81=AA=E3=81=A4=E3=81=8D?= <i@ntk.me>
+Date: Sat, 14 Jan 2023 02:59:21 +0000
+Subject: [PATCH 4/6] no-werror
+
+---
+ build/config/compiler/BUILD.gn | 1 -
+ runtime/BUILD.gn               | 1 -
+ 2 files changed, 2 deletions(-)
+
+diff --git a/build/config/compiler/BUILD.gn b/build/config/compiler/BUILD.gn
+index a593b59f..a314d25a 100644
+--- a/build/config/compiler/BUILD.gn
++++ b/build/config/compiler/BUILD.gn
+@@ -636,7 +636,6 @@ config("chromium_code") {
+     cflags = [
+       "-Wall",
+       "-Wextra",
+-      "-Werror",
+     ]
+ 
+     defines = []
+diff --git a/runtime/BUILD.gn b/runtime/BUILD.gn
+index 3e6c317b..bd24c507 100644
+--- a/runtime/BUILD.gn
++++ b/runtime/BUILD.gn
+@@ -190,7 +190,6 @@ config("dart_config") {
+     }
+   } else {
+     cflags = [
+-      "-Werror",
+       "-Wall",
+       "-Wextra",  # Also known as -W.
+       "-Wno-unused-parameter",
+-- 
+2.39.0
+

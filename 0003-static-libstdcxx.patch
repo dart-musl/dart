@@ -1,0 +1,25 @@
+From 32935415928527c2ab1c46bec856660a4db8ae3d Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?=E3=81=AA=E3=81=A4=E3=81=8D?= <i@ntk.me>
+Date: Sat, 14 Jan 2023 02:59:11 +0000
+Subject: [PATCH 3/6] static-libstdcxx
+
+---
+ build/config/linux/BUILD.gn | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/build/config/linux/BUILD.gn b/build/config/linux/BUILD.gn
+index efaf502b..c31ebf6b 100644
+--- a/build/config/linux/BUILD.gn
++++ b/build/config/linux/BUILD.gn
+@@ -11,6 +11,8 @@ config("sdk") {
+   if (is_clang) {
+     # Don't allow visible symbols from libc++ to be re-exported.
+     ldflags += [ "-Wl,--exclude-libs=libc++.a" ]
++    # use lld
++    ldflags += [ "-fuse-ld=lld", "-static-libstdc++", "-static-libgcc" ]
+   }
+ 
+   if (sysroot != "") {
+-- 
+2.39.0
+

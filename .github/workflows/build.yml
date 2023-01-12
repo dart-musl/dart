@@ -1,0 +1,373 @@
+name: build
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  configure:
+    name: Configure
+
+    runs-on: ubuntu-latest
+
+    outputs:
+      dart_version: ${{ steps.configure.outputs.dart_version }}
+      dart_bootstrap_version: ${{ steps.configure.outputs.dart_bootstrap_version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure
+        id: configure
+        run: |
+          DART_VERSION=$(cat version)
+          DART_BOOTSTRAP_VERSION=$(curl -fsSL "https://raw.githubusercontent.com/dart-lang/sdk/$DART_VERSION/DEPS" | grep -F '"sdk_tag":' | cut -d '"' -f 4 | cut -d ':' -f 2)
+          echo "dart_version=$DART_VERSION" | tee -a $GITHUB_OUTPUT
+          echo "dart_bootstrap_version=$DART_BOOTSTRAP_VERSION" | tee -a $GITHUB_OUTPUT
+
+  bootstrap:
+    name: Bootstrap ${{ needs.configure.outputs.dart_bootstrap_version }} (${{ matrix.target_arch }})
+
+    needs: [configure]
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: debian:11
+      env:
+        DART_GN_ARGS: dart_use_tcmalloc=false
+        DEPOT_TOOLS_UPDATE: 0
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host_arch: x64
+            target_arch: x64
+
+    steps:
+      - name: Cache
+        id: cache
+        uses: actions/cache@v3
+        with:
+          key: dartsdk-linux-${{ matrix.target_arch }}-${{ needs.configure.outputs.dart_bootstrap_version }}
+          path: dartsdk-linux-${{ matrix.target_arch }}-release.tar.gz
+
+      - name: Install build tools
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          apt-get update
+          apt-get install --no-install-recommends -y ca-certificates curl git python3
+
+      - name: Install extra build tools
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          apt-get install --no-install-recommends -y ninja-build # dart-sdk <2.18.0
+
+      - name: Fetch Dart SDK
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+          export PATH=$PWD/depot_tools:$PATH
+          update_depot_tools
+          mkdir dart-sdk
+          cd dart-sdk
+          tee .gclient <<'EOF'
+          solutions = [{
+            'name': 'sdk',
+            'url': 'https://dart.googlesource.com/sdk.git@${{ needs.configure.outputs.dart_bootstrap_version }}',
+          }]
+          EOF
+          gclient sync --no-history
+
+      - name: Build
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          cd dart-sdk/sdk
+          ./tools/build.py --no-goma --mode release --arch ${{ matrix.target_arch }} create_sdk
+
+      - name: Archive
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          tar -czf dartsdk-linux-${{ matrix.target_arch }}-release.tar.gz -C dart-sdk/sdk/out/Release* -- dart-sdk
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: dartsdk-linux-${{ matrix.target_arch }}-${{ needs.configure.outputs.dart_bootstrap_version }}
+          path: dartsdk-linux-${{ matrix.target_arch }}-release.tar.gz
+          if-no-files-found: error
+
+  patch:
+    name: Patch ${{ needs.configure.outputs.dart_version }}
+
+    needs: [configure]
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: debian:11
+      env:
+        DEPOT_TOOLS_UPDATE: 0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install build tools
+        run: |
+          apt-get update
+          apt-get install --no-install-recommends -y ca-certificates curl git python3
+
+      - name: Fetch Dart SDK
+        run: |
+          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+          export PATH=$PWD/depot_tools:$PATH
+          update_depot_tools
+          mkdir dart-sdk
+          cd dart-sdk
+          tee .gclient <<'EOF'
+          solutions = [{
+            'name': 'sdk',
+            'url': 'https://dart.googlesource.com/sdk.git@${{ needs.configure.outputs.dart_version }}',
+          }]
+          EOF
+          gclient sync --no-history --nohooks
+          python3 sdk/tools/generate_package_config.py
+          python3 sdk/tools/generate_sdk_version_file.py
+
+      - name: Patch Dart SDK
+        run: |
+          cd dart-sdk/sdk
+          git apply ../../*.patch
+
+      - name: Patch build timestamp
+        run: |
+          cd dart-sdk/sdk
+          sed -i -e 's/Unknown timestamp/'"$(git log -n 1 --pretty=format:%cd)"'/' tools/make_version.py
+
+      - name: Remove build tools
+        run: |
+          cd dart-sdk/sdk
+          rm -rf buildtools/linux-*/clang/
+          mkdir -p buildtools/linux-x64/clang/.versions buildtools/linux-arm64/clang/.versions
+          echo '{"instance_id":"system"}' | tee buildtools/linux-x64/clang/.versions/clang.cipd_version buildtools/linux-arm64/clang/.versions/clang.cipd_version
+
+      - name: Remove Bootstrap Dart SDK
+        run: |
+          cd dart-sdk/sdk
+          rm -rf tools/sdks/dart-sdk
+
+      - name: Archive
+        run: |
+          python3 dart-sdk/sdk/tools/linux_dist_support/create_tarball.py --tar_filename dart-${{ needs.configure.outputs.dart_version }}.tar.gz
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: dart-${{ needs.configure.outputs.dart_version }}
+          path: dart-${{ needs.configure.outputs.dart_version }}.tar.gz
+          if-no-files-found: error
+
+  build:
+    name: Build ${{ needs.configure.outputs.dart_version }} (${{ matrix.target_arch }})
+
+    needs: [configure, bootstrap, patch]
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: alpine:3
+      env:
+        DART_GN_ARGS: |
+          dart_snapshot_kind="app-jit"
+          dart_use_tcmalloc=false
+        DEPOT_TOOLS_UPDATE: 0
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host_arch: x64
+            target_arch: x64
+          - host_arch: x64
+            target_arch: ia32
+          - host_arch: x64
+            target_arch: arm64
+          - host_arch: x64
+            target_arch: arm
+
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: dart-${{ needs.configure.outputs.dart_version }}
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: dartsdk-linux-${{ matrix.host_arch }}-${{ needs.configure.outputs.dart_bootstrap_version }}
+
+      - name: Unarchive
+        run: |
+          mkdir dart-sdk
+          cd dart-sdk
+          tar -xzf ../dart-${{ needs.configure.outputs.dart_version }}.tar.gz --strip-components=1
+          mv dart sdk
+          tar -xzf ../dartsdk-linux-${{ matrix.host_arch }}-release.tar.gz -C sdk/tools/sdks
+          rm -f ../*.tar.gz
+
+      - name: Install build tools
+        run: |
+          apk add --no-cache alpine-sdk bash clang curl gcompat gn lld llvm python3
+
+      - name: Create sysroot
+        run: |
+          cd dart-sdk/sdk
+          xargs -n 2 -- sh -c 'apk add --root "$1" --repositories-file /etc/apk/repositories --allow-untrusted --arch "$2" --no-cache --no-scripts --initdb -- alpine-base alpine-sdk linux-headers' -- <<'EOF'
+          build/linux/debian_jessie_i386-sysroot x86
+          build/linux/debian_jessie_amd64-sysroot x86_64
+          build/linux/debian_jessie_arm-sysroot armv7
+          build/linux/debian_jessie_arm64-sysroot aarch64
+          EOF
+
+      - name: Setup multiarch musl
+        run: |
+          cd dart-sdk/sdk
+          xargs -n 1 -- sh -c 'apk info --root "$1" --contents musl | sed -e 1d | xargs -n 1 echo "$1"' -- <<'EOF' | xargs -n 2 -- sh -c 'test -f "$1/$2" && { test -f "/$2" || cp "$1/$2" "/$2"; }' --
+          build/linux/debian_jessie_i386-sysroot
+          build/linux/debian_jessie_amd64-sysroot
+          build/linux/debian_jessie_arm-sysroot
+          build/linux/debian_jessie_arm64-sysroot
+          EOF
+
+      - name: Patch
+        if: matrix.target_arch == 'ia32'
+        run: |
+          cd dart-sdk/sdk
+          # error: no template named 'initializer_list' in namespace 'std'
+          sed -i -e '/cc_std/s/c++17/c++20/' build/config/compiler/BUILD.gn
+
+      - name: Build
+        run: |
+          cd dart-sdk/sdk
+          ./tools/build.py --no-goma --mode release --arch ${{ matrix.target_arch }} create_sdk
+
+      - name: Archive
+        run: |
+          tar -czf dartsdk-linux-${{ matrix.target_arch }}-release.tar.gz -C dart-sdk/sdk/out/Release* -- dart-sdk
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: dartsdk-linux-${{ matrix.target_arch }}-${{ needs.configure.outputs.dart_version }}
+          path: dartsdk-linux-${{ matrix.target_arch }}-release.tar.gz
+          if-no-files-found: error
+
+  release:
+    name: Release
+
+    if: github.event.repository.fork == false && startsWith(github.ref, 'refs/tags/')
+
+    needs: [configure, build]
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: dartsdk-linux-x64-${{ needs.configure.outputs.dart_version }}
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: dartsdk-linux-ia32-${{ needs.configure.outputs.dart_version }}
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: dartsdk-linux-arm64-${{ needs.configure.outputs.dart_version }}
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: dartsdk-linux-arm-${{ needs.configure.outputs.dart_version }}
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dartsdk-linux-x64-release.tar.gz
+            dartsdk-linux-ia32-release.tar.gz
+            dartsdk-linux-arm64-release.tar.gz
+            dartsdk-linux-arm-release.tar.gz
+
+  release-container:
+    name: Release Container
+
+    if: github.event.repository.fork == false && startsWith(github.ref, 'refs/tags/')
+
+    needs: [release]
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Docker Metadata
+        id: docker-metadata
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=edge
+            type=ref,event=branch
+            type=ref,event=pr
+            type=schedule
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          build-args: |
+            BASEURL=${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/386,linux/arm/v7
+          push: true
+          tags: ${{ steps.docker-metadata.outputs.tags }}
+          labels: ${{ steps.docker-metadata.outputs.labels }}
