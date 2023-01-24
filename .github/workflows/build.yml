@@ -45,9 +45,6 @@ jobs:
 
     container:
       image: debian:11
-      env:
-        DART_GN_ARGS: dart_use_tcmalloc=false
-        DEPOT_TOOLS_UPDATE: 0
 
     strategy:
       fail-fast: false
@@ -68,19 +65,14 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           apt-get update
-          apt-get install --no-install-recommends -y ca-certificates curl git python3
-
-      - name: Install extra build tools
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          apt-get install --no-install-recommends -y ninja-build # dart-sdk <2.18.0
+          apt-get install --no-install-recommends -y ca-certificates curl git python3 xz-utils
 
       - name: Fetch Dart SDK
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-          export PATH=$PWD/depot_tools:$PATH
-          update_depot_tools
+          export DEPOT_TOOLS_UPDATE=0 PATH=$PWD/depot_tools:$PATH
+
           mkdir dart-sdk
           cd dart-sdk
           tee .gclient <<'EOF'
@@ -95,7 +87,7 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
           cd dart-sdk/sdk
-          ./tools/build.py --no-goma --mode release --arch ${{ matrix.target_arch }} create_sdk
+          ./tools/build.py --no-goma --mode release --arch ${{ matrix.target_arch }} --gn-args 'dart_use_tcmalloc=false' create_sdk
 
       - name: Archive
         if: steps.cache.outputs.cache-hit != 'true'
@@ -110,7 +102,7 @@ jobs:
           if-no-files-found: error
 
   patch:
-    name: Patch ${{ needs.configure.outputs.dart_version }}
+    name: Archive ${{ needs.configure.outputs.dart_version }}
 
     needs: [configure]
 
@@ -118,13 +110,8 @@ jobs:
 
     container:
       image: debian:11
-      env:
-        DEPOT_TOOLS_UPDATE: 0
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
       - name: Install build tools
         run: |
           apt-get update
@@ -133,8 +120,8 @@ jobs:
       - name: Fetch Dart SDK
         run: |
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-          export PATH=$PWD/depot_tools:$PATH
-          update_depot_tools
+          export DEPOT_TOOLS_UPDATE=0 PATH=$PWD/depot_tools:$PATH
+
           mkdir dart-sdk
           cd dart-sdk
           tee .gclient <<'EOF'
@@ -148,22 +135,20 @@ jobs:
           python3 sdk/tools/generate_sdk_version_file.py
 
       - name: Patch Dart SDK
+        if: startsWith(needs.configure.outputs.dart_version, '2.19.')
         run: |
           cd dart-sdk/sdk
-          git apply ../../*.patch
-
-      - name: Patch build timestamp
-        run: |
-          curl -fsSLo timestamp.patch https://patch-diff.githubusercontent.com/raw/dart-lang/sdk/pull/51057.diff
-          cd dart-sdk/sdk
-          git apply ../../timestamp.patch
+          curl -fsSLo ../alpine-sysroot.diff https://github.com/dart-lang/sdk/commit/afe921902609e95e5050dad1fe82d2a69bcdcf95.diff
+          curl -fsSLo ../git-timestamp.diff https://patch-diff.githubusercontent.com/raw/dart-lang/sdk/pull/51057.diff
+          git apply ../*.diff
 
       - name: Remove build tools
         run: |
           cd dart-sdk/sdk
-          rm -rf buildtools/linux-*/clang/
-          mkdir -p buildtools/linux-x64/clang/.versions buildtools/linux-arm64/clang/.versions
-          echo '{"instance_id":"system"}' | tee buildtools/linux-x64/clang/.versions/clang.cipd_version buildtools/linux-arm64/clang/.versions/clang.cipd_version
+          rm -rf buildtools
+          mkdir -p buildtools/ninja
+          ln -s /usr/bin/gn buildtools/gn
+          ln -s /usr/bin/ninja buildtools/ninja/ninja
 
       - name: Remove Bootstrap Dart SDK
         run: |
@@ -190,11 +175,6 @@ jobs:
 
     container:
       image: alpine:3
-      env:
-        DART_GN_ARGS: |
-          dart_snapshot_kind="app-jit"
-          dart_use_tcmalloc=false
-        DEPOT_TOOLS_UPDATE: 0
 
     strategy:
       fail-fast: false
@@ -233,37 +213,20 @@ jobs:
         run: |
           apk add --no-cache alpine-sdk bash clang curl gcompat gn lld llvm python3
 
-      - name: Create sysroot
+      - name: Install sysroot
         run: |
           cd dart-sdk/sdk
-          xargs -n 2 -- sh -c 'apk add --root "$1" --repositories-file /etc/apk/repositories --allow-untrusted --arch "$2" --no-cache --no-scripts --initdb -- alpine-base alpine-sdk linux-headers' -- <<'EOF'
-          build/linux/debian_jessie_i386-sysroot x86
-          build/linux/debian_jessie_amd64-sysroot x86_64
-          build/linux/debian_jessie_arm-sysroot armv7
-          build/linux/debian_jessie_arm64-sysroot aarch64
-          EOF
+          ./build/linux/alpine_sysroot_scripts/install-sysroot.sh
 
       - name: Setup multiarch musl
         run: |
           cd dart-sdk/sdk
-          xargs -n 1 -- sh -c 'apk info --root "$1" --contents musl | sed -e 1d | xargs -n 1 echo "$1"' -- <<'EOF' | xargs -n 2 -- sh -c 'test -f "$1/$2" && { test -f "/$2" || cp "$1/$2" "/$2"; }' --
-          build/linux/debian_jessie_i386-sysroot
-          build/linux/debian_jessie_amd64-sysroot
-          build/linux/debian_jessie_arm-sysroot
-          build/linux/debian_jessie_arm64-sysroot
-          EOF
-
-      - name: Patch
-        if: matrix.target_arch == 'ia32'
-        run: |
-          cd dart-sdk/sdk
-          # error: no template named 'initializer_list' in namespace 'std'
-          sed -i -e '/cc_std/s/c++17/c++20/' build/config/compiler/BUILD.gn
+          find build/linux -mindepth 1 -maxdepth 1 -name 'alpine-*-sysroot' -print0 | xargs -0 -n 1 -I {} -- find {}/lib -mindepth 1 -maxdepth 1 \( -name 'ld-musl-*.so.1' -o -name 'libc.musl-*.so.1' \) -print0 | xargs -0 -n 1 -- sh -xc 'cp -u "$1" /lib' --
 
       - name: Build
         run: |
           cd dart-sdk/sdk
-          ./tools/build.py --no-goma --mode release --arch ${{ matrix.target_arch }} create_sdk
+          ./tools/build.py --no-goma --mode release --arch ${{ matrix.target_arch }} --gn-args 'dart_snapshot_kind="app-jit"' --gn-args 'dart_sysroot="alpine"' --gn-args 'dart_use_tcmalloc=false' create_sdk
 
       - name: Archive
         run: |
