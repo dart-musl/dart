@@ -326,7 +326,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           build-args: |
             BASEURL=${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}
