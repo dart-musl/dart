@@ -138,8 +138,9 @@ jobs:
         if: startsWith(needs.configure.outputs.dart_version, '2.19.')
         run: |
           cd dart-sdk/sdk
-          curl -fsSLo ../alpine-sysroot.diff https://github.com/dart-lang/sdk/commit/afe921902609e95e5050dad1fe82d2a69bcdcf95.diff
-          curl -fsSLo ../git-timestamp.diff https://patch-diff.githubusercontent.com/raw/dart-lang/sdk/pull/51057.diff
+          curl -fsSLo ../0001.diff https://github.com/dart-lang/sdk/commit/afe921902609e95e5050dad1fe82d2a69bcdcf95.diff
+          curl -fsSLo ../0002.diff https://github.com/dart-lang/sdk/commit/9fefe1054e24510e5aad412208f0b401b6c9c035.diff
+          curl -fsSLo ../0003.diff https://patch-diff.githubusercontent.com/raw/dart-lang/sdk/pull/51057.diff
           git apply ../*.diff
 
       - name: Remove build tools
