@@ -67,8 +67,18 @@ jobs:
           apt-get update
           apt-get install --no-install-recommends -y ca-certificates curl git python3 xz-utils
 
-      - name: Fetch Dart SDK
+      - name: Download Dart SDK
+        id: download
         if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          if curl -fsSLo dartsdk-linux-${{ matrix.target_arch }}-release.tar.gz https://github.com/dart-musl/dart/releases/download/${{ needs.configure.outputs.dart_bootstrap_version }}/dartsdk-linux-${{ matrix.target_arch }}-release.tar.gz; then
+            echo "cache-hit=true" | tee -a $GITHUB_OUTPUT
+          else
+            echo "cache-hit=false" | tee -a $GITHUB_OUTPUT
+          fi
+
+      - name: Fetch Dart SDK
+        if: steps.cache.outputs.cache-hit != 'true' && steps.download.outputs.cache-hit != 'true'
         run: |
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
           export DEPOT_TOOLS_UPDATE=0 PATH=$PWD/depot_tools:$PATH
@@ -84,13 +94,13 @@ jobs:
           gclient sync --no-history
 
       - name: Build
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: steps.cache.outputs.cache-hit != 'true' && steps.download.outputs.cache-hit != 'true'
         run: |
           cd dart-sdk/sdk
           ./tools/build.py --no-goma --mode release --arch ${{ matrix.target_arch }} --gn-args 'dart_use_tcmalloc=false' create_sdk
 
       - name: Archive
-        if: steps.cache.outputs.cache-hit != 'true'
+        if: steps.cache.outputs.cache-hit != 'true' && steps.download.outputs.cache-hit != 'true'
         run: |
           tar -czf dartsdk-linux-${{ matrix.target_arch }}-release.tar.gz -C dart-sdk/sdk/out/Release* -- dart-sdk
 
