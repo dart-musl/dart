@@ -233,10 +233,18 @@ jobs:
           cd dart-sdk/sdk
           find build/linux -mindepth 1 -maxdepth 1 -name 'alpine-*-sysroot' -print0 | xargs -0 -n 1 -I {} -- find {}/lib -mindepth 1 -maxdepth 1 \( -name 'ld-musl-*.so.1' -o -name 'libc.musl-*.so.1' \) -print0 | xargs -0 -n 1 -- sh -xc 'cp -u "$1" /lib' --
 
+      - name: Configure TCMalloc
+        run: |
+          apk add --no-cache autoconf automake libtool
+          cd dart-sdk/sdk/third_party/tcmalloc/gperftools
+          source ../configure_command
+          cp src/config.h ../include/config.h
+          cp src/tcmalloc.h ../gperftools/tcmalloc.h
+
       - name: Build
         run: |
           cd dart-sdk/sdk
-          ./tools/build.py --no-goma --mode release --arch ${{ matrix.target_arch }} --gn-args 'dart_snapshot_kind="app-jit"' --gn-args 'dart_sysroot="alpine"' --gn-args 'dart_use_tcmalloc=false' create_sdk
+          ./tools/build.py --no-goma --mode release --arch ${{ matrix.target_arch }} --gn-args 'dart_snapshot_kind="app-jit"' --gn-args 'dart_sysroot="alpine"' create_sdk
 
       - name: Archive
         run: |
