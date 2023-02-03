@@ -236,6 +236,8 @@ jobs:
           source ../configure_command
           cp src/config.h ../include/config.h
           cp src/tcmalloc.h ../gperftools/tcmalloc.h
+          echo
+          cat src/config.h
 
       - name: Setup multiarch musl
         run: |
