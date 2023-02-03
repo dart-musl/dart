@@ -111,7 +111,7 @@ jobs:
           path: dartsdk-linux-${{ matrix.target_arch }}-release.tar.gz
           if-no-files-found: error
 
-  patch:
+  archive:
     name: Archive ${{ needs.configure.outputs.dart_version }}
 
     needs: [configure]
@@ -179,7 +179,7 @@ jobs:
   build:
     name: Build ${{ needs.configure.outputs.dart_version }} (${{ matrix.target_arch }})
 
-    needs: [configure, bootstrap, patch]
+    needs: [configure, bootstrap, archive]
 
     runs-on: ubuntu-latest
 
