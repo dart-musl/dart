@@ -232,7 +232,7 @@ jobs:
         run: |
           apk add --no-cache autoconf automake libtool
           cd dart-sdk/sdk/third_party/tcmalloc/gperftools
-          CC=clang CXX=clang++ source ../configure_command
+          CC=clang CXX=clang++ /bin/sh ../configure_command
           cp src/config.h ../include/config.h
           cp src/tcmalloc.h ../gperftools/tcmalloc.h
 
