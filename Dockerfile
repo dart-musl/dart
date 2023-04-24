@@ -19,6 +19,8 @@ RUN apk add --no-cache \
         SDK_ARCH=arm64;; \
       armv7) \
         SDK_ARCH=arm;; \
+      riscv64) \
+        SDK_ARCH=riscv64;; \
     esac \
  && wget -O- "$BASEURL/dartsdk-linux-$SDK_ARCH-release.tar.gz" \
   | tar -xz \

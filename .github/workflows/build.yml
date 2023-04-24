@@ -46,6 +46,33 @@ jobs:
           python3 sdk/tools/generate_package_config.py
           python3 sdk/tools/generate_sdk_version_file.py
 
+      - name: Patch Dart SDK 3.1.0-189.0.dev
+        if: inputs.ref == '3.1.0-189.0.dev'
+        run: |
+          cd dart-sdk/sdk
+          xargs -n 1 -- sh -xc 'curl -fsSL "https://github.com/dart-lang/sdk/commit/$1.diff" | git apply -' -- <<'EOF'
+          99c68b013bab3c574abe300d710d5bdf8f111c10
+          EOF
+
+      - name: Patch Dart SDK 3.0
+        run: |
+          cd dart-sdk/sdk
+          if ! grep -q alpine-linux-riscv64-sysroot build/config/sysroot.gni; then
+            xargs -n 1 -- sh -xc 'curl -fsSLo "$1" "https://github.com/dart-lang/sdk/raw/3.1.0-205.0.dev/$1"' -- <<'EOF'
+            build/config/sysroot.gni
+            build/linux/alpine_sysroot_scripts/install-sysroot.sh
+          EOF
+            chmod a+x build/linux/alpine_sysroot_scripts/install-sysroot.sh
+          fi
+
+      - name: Patch perfetto
+        run: |
+          cd dart-sdk/sdk
+          sed -i -e '/#define INCLUDE_PERFETTO_EXT_BASE_UUID_H_/a\
+          \
+          #include <stdint.h>' -- third_party/perfetto/include/perfetto/ext/base/uuid.h
+          cat third_party/perfetto/include/perfetto/ext/base/uuid.h
+
       - name: Get Checked-in Dart SDK Version
         id: version
         run: |
@@ -104,6 +131,8 @@ jobs:
             target-arch: arm64
           - host-arch: x64
             target-arch: arm
+          - host-arch: x64
+            target-arch: riscv64
 
     steps:
       - name: Download Artifact
@@ -130,10 +159,16 @@ jobs:
         run: |
           apk add --no-cache alpine-sdk bash clang curl gn lld llvm python3
 
-      - name: Install sysroot
+      - name: Install default sysroots
         run: |
           cd dart-sdk/sdk
           ./build/linux/alpine_sysroot_scripts/install-sysroot.sh
+
+      - name: Install riscv64 sysroot
+        if: matrix.target-arch == 'riscv64'
+        run: |
+          cd dart-sdk/sdk
+          ./build/linux/alpine_sysroot_scripts/install-sysroot.sh riscv64
 
       - name: Setup multiarch musl
         run: |
