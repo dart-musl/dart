@@ -40,6 +40,11 @@ jobs:
         with:
           name: dartsdk-linux-arm-${{ github.ref_name }}
 
+      - name: Download Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: dartsdk-linux-riscv64-${{ github.ref_name }}
+
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
@@ -49,6 +54,7 @@ jobs:
             dartsdk-linux-ia32-release.tar.gz
             dartsdk-linux-arm64-release.tar.gz
             dartsdk-linux-arm-release.tar.gz
+            dartsdk-linux-riscv64-release.tar.gz
 
   container:
     needs: [release]

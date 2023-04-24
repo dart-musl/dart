@@ -56,6 +56,13 @@ jobs:
           4486a3f45dc40aa8ab1357db38da465c5899631f
           EOF
 
+      - name: Patch Dart SDK riscv64
+        run: |
+          cd dart-sdk/sdk
+          xargs -n 1 -- sh -xc 'curl -fsSL "https://github.com/dart-lang/sdk/commit/$1.diff" | git apply -' -- <<'EOF'
+          0f549e2069ff78fedf43a9781ce5b80625b9d470
+          EOF
+
       - name: Remove build tools
         run: |
           cd dart-sdk/sdk
@@ -145,7 +152,8 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: docker.io/library/alpine
+      # riscv64 is currently alpine edge only
+      image: docker.io/library/alpine:${{ matrix.target-arch == 'riscv64' && 'edge' || 'latest' }}
 
     strategy:
       fail-fast: false
@@ -159,6 +167,8 @@ jobs:
             target-arch: arm64
           - host-arch: x64
             target-arch: arm
+          - host-arch: x64
+            target-arch: riscv64
 
     steps:
       - name: Download Artifact
@@ -192,10 +202,16 @@ jobs:
         run: |
           apk add --no-cache alpine-sdk bash clang curl gn lld llvm python3
 
-      - name: Install sysroot
+      - name: Install default sysroots
         run: |
           cd dart-sdk/sdk
           ./build/linux/alpine_sysroot_scripts/install-sysroot.sh
+
+      - name: Install riscv64 sysroot
+        if: matrix.target-arch == 'riscv64'
+        run: |
+          cd dart-sdk/sdk
+          ./build/linux/alpine_sysroot_scripts/install-sysroot.sh riscv64
 
       - name: Setup multiarch musl
         run: |
