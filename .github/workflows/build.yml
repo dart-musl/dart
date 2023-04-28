@@ -101,6 +101,11 @@ jobs:
           apt-get update
           apt-get install --no-install-recommends -y ca-certificates curl git python3 xz-utils
 
+      - name: Install build tools
+        if: startsWith(needs.archive.outputs.checked-in-sdk-version, '2.18.')
+        run: |
+          apt-get install --no-install-recommends -y ninja-build
+
       - name: Download Dart SDK
         id: download
         run: |
