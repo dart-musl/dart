@@ -23,7 +23,7 @@ jobs:
       image: docker.io/library/debian
 
     outputs:
-      checked-in-sdk-version: ${{ steps.fetch.outputs.version }}
+      checked-in-sdk-version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Install build tools
@@ -32,7 +32,6 @@ jobs:
           apt-get install --no-install-recommends -y ca-certificates curl git python3
 
       - name: Fetch Dart SDK
-        id: fetch
         run: |
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
           export DEPOT_TOOLS_UPDATE=0 PATH=$PWD/depot_tools:$PATH
@@ -44,24 +43,17 @@ jobs:
           python3 sdk/tools/generate_package_config.py
           python3 sdk/tools/generate_sdk_version_file.py
 
-
+      - name: Get Checked-in Dart SDK Version
+        id: version
+        run: |
           tee /tmp/version.dart <<'EOF'
           import 'dart:io' show Platform;
-
           void main() {
             print('version=' + Platform.version.split(' ')[0]);
           }
           EOF
-          sdk/tools/sdks/dart-sdk/bin/dart run /tmp/version.dart | tee -a $GITHUB_OUTPUT
-
-      - name: Patch Dart SDK 2.19
-        if: startsWith(inputs.ref, '2.19.')
-        run: |
           cd dart-sdk/sdk
-          xargs -n 1 -- sh -xc 'curl -fsSL "https://github.com/dart-lang/sdk/commit/$1.diff" | git apply -' -- <<'EOF'
-          afe921902609e95e5050dad1fe82d2a69bcdcf95
-          4486a3f45dc40aa8ab1357db38da465c5899631f
-          EOF
+          ./tools/sdks/dart-sdk/bin/dart run /tmp/version.dart | tee -a $GITHUB_OUTPUT
 
       - name: Remove build tools
         run: |
@@ -107,11 +99,6 @@ jobs:
         run: |
           apt-get update
           apt-get install --no-install-recommends -y ca-certificates curl git python3 xz-utils
-
-      - name: Install build tools
-        if: startsWith(needs.archive.outputs.checked-in-sdk-version, '2.18.')
-        run: |
-          apt-get install --no-install-recommends -y ninja-build
 
       - name: Download Dart SDK
         id: download
