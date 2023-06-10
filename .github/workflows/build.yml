@@ -22,8 +22,11 @@ jobs:
     container:
       image: docker.io/library/debian
 
-    outputs:
-      checked-in-sdk-version: ${{ steps.version.outputs.version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host-arch: x64
 
     steps:
       - name: Install build tools
@@ -55,6 +58,13 @@ jobs:
           cd dart-sdk/sdk
           ./tools/sdks/dart-sdk/bin/dart run /tmp/version.dart | tee -a $GITHUB_OUTPUT
 
+      - name: Fetch Checked-in SDK
+        run: |
+          if curl -fsSLO ${{ github.server_url }}/${{ github.repository }}/releases/download/${{ steps.version.outputs.version }}/dartsdk-linux-${{ matrix.host-arch }}-release.tar.gz; then
+            rm -rf dart-sdk/sdk/tools/sdks/dart-sdk
+            tar -xzf dartsdk-linux-${{ matrix.host-arch }}-release.tar.gz -C dart-sdk/sdk/tools/sdks
+          fi
+
       - name: Remove build tools
         run: |
           cd dart-sdk/sdk
@@ -63,83 +73,19 @@ jobs:
           ln -s /usr/bin/gn buildtools/gn
           ln -s /usr/bin/ninja buildtools/ninja/ninja
 
-      - name: Remove Checked-in SDK
-        run: |
-          cd dart-sdk/sdk
-          rm -rf tools/sdks/dart-sdk
-
       - name: Archive
         run: |
-          python3 dart-sdk/sdk/tools/linux_dist_support/create_tarball.py --tar_filename dart-${{ inputs.ref }}.tar.gz
+          python3 dart-sdk/sdk/tools/linux_dist_support/create_tarball.py --tar_filename dart-${{ inputs.ref }}-${{ matrix.host-arch }}.tar.gz
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: dart-${{ inputs.ref }}
-          path: dart-${{ inputs.ref }}.tar.gz
-          if-no-files-found: error
-
-  bootstrap:
-    needs: [archive]
-
-    runs-on: ubuntu-latest
-
-    container:
-      image: docker.io/library/debian
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - host-arch: x64
-            target-arch: x64
-
-    steps:
-      - name: Install build tools
-        run: |
-          apt-get update
-          apt-get install --no-install-recommends -y ca-certificates curl git python3 xz-utils
-
-      - name: Download Dart SDK
-        id: download
-        run: |
-          if curl -fsSLO ${{ github.server_url }}/${{ github.repository }}/releases/download/${{ needs.archive.outputs.checked-in-sdk-version }}/dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz; then
-            echo "cache-hit=true" | tee -a $GITHUB_OUTPUT
-          else
-            echo "cache-hit=false" | tee -a $GITHUB_OUTPUT
-          fi
-
-      - name: Fetch Dart SDK
-        if: steps.download.outputs.cache-hit != 'true'
-        run: |
-          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-          export DEPOT_TOOLS_UPDATE=0 PATH=$PWD/depot_tools:$PATH
-
-          mkdir dart-sdk
-          cd dart-sdk
-          gclient config --name sdk https://dart.googlesource.com/sdk.git@${{ needs.archive.outputs.checked-in-sdk-version }}
-          gclient sync --no-history
-
-      - name: Build
-        if: steps.download.outputs.cache-hit != 'true'
-        run: |
-          cd dart-sdk/sdk
-          ./tools/build.py --no-goma --mode release --arch ${{ matrix.target-arch }} --gn-args 'dart_use_tcmalloc=false' create_sdk
-
-      - name: Archive
-        if: steps.download.outputs.cache-hit != 'true'
-        run: |
-          tar -czf dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz -C dart-sdk/sdk/out/Release* -- dart-sdk
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: dartsdk-linux-${{ matrix.target-arch }}-${{ needs.archive.outputs.checked-in-sdk-version }}@bootstrap-${{ inputs.ref }}
-          path: dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz
+          name: dart-${{ inputs.ref }}-${{ matrix.host-arch }}
+          path: dart-${{ inputs.ref }}-${{ matrix.host-arch }}.tar.gz
           if-no-files-found: error
 
   build:
-    needs: [bootstrap, archive]
+    needs: [archive]
 
     runs-on: ubuntu-latest
 
@@ -163,21 +109,14 @@ jobs:
       - name: Download Artifact
         uses: actions/download-artifact@v3
         with:
-          name: dart-${{ inputs.ref }}
-
-      - name: Download Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: dartsdk-linux-${{ matrix.host-arch }}-${{ needs.archive.outputs.checked-in-sdk-version }}@bootstrap-${{ inputs.ref }}
+          name: dart-${{ inputs.ref }}-${{ matrix.host-arch }}
 
       - name: Unarchive
         run: |
           mkdir dart-sdk
           cd dart-sdk
-          tar -xzf ../dart-${{ inputs.ref }}.tar.gz --strip-components=1
+          tar -xzf ../dart-${{ inputs.ref }}-${{ matrix.host-arch }}.tar.gz --strip-components=1
           mv dart sdk
-          tar -xzf ../dartsdk-linux-${{ matrix.host-arch }}-release.tar.gz -C sdk/tools/sdks
-          rm -f ../*.tar.gz
 
       - name: Verify Checked-in Dart SDK
         run: |
