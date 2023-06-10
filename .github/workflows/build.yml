@@ -58,7 +58,7 @@ jobs:
           cd dart-sdk/sdk
           ./tools/sdks/dart-sdk/bin/dart run /tmp/version.dart | tee -a $GITHUB_OUTPUT
 
-      - name: Fetch Checked-in SDK
+      - name: Fetch Checked-in Dart SDK
         run: |
           if curl -fsSLO ${{ github.server_url }}/${{ github.repository }}/releases/download/${{ steps.version.outputs.version }}/dartsdk-linux-${{ matrix.host-arch }}-release.tar.gz; then
             rm -rf dart-sdk/sdk/tools/sdks/dart-sdk
@@ -90,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: docker.io/library/alpine
+      image: docker.io/library/alpine:${{ matrix.target-arch == 'riscv64' && 'edge' || 'latest' }}
 
     strategy:
       fail-fast: false
