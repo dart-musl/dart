@@ -166,7 +166,7 @@ jobs:
             libstdc++-13.1.1_git20230722-r1.apk
             libstdc++-dev-13.1.1_git20230722-r1.apk
           EOF
-          find . -mindepth 1 -maxdepth 1 -name '*-13.1.1_git20230722-r1.apk' -print0 | xargs -0 apk add --root "$GITHUB_WORKSPACE/dart-sdk/sdk/build/linux/alpine-linux-riscv64-sysroot" --allow-untrusted --
+          find . -mindepth 1 -maxdepth 1 -name '*-13.1.1_git20230722-r1.apk' -print0 | xargs -0 apk add --root "$GITHUB_WORKSPACE/dart-sdk/sdk/build/linux/alpine-linux-riscv64-sysroot" --allow-untrusted --no-scripts --
 
       - name: Setup multiarch musl
         run: |
