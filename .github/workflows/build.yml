@@ -154,6 +154,20 @@ jobs:
           cd dart-sdk/sdk
           ./build/linux/alpine_sysroot_scripts/install-sysroot.sh riscv64
 
+      - name: Fix riscv64 sysroot
+        if: matrix.target-arch == 'riscv64'
+        run: |
+          xargs -n 1 -I {} wget https://github.com/dart-musl/dl-cdn.alpinelinux.org/raw/main/alpine/edge/main/riscv64/{} <<'EOF'
+            g++-13.1.1_git20230722-r1.apk
+            gcc-13.1.1_git20230722-r1.apk
+            libatomic-13.1.1_git20230722-r1.apk
+            libgcc-13.1.1_git20230722-r1.apk
+            libgomp-13.1.1_git20230722-r1.apk
+            libstdc++-13.1.1_git20230722-r1.apk
+            libstdc++-dev-13.1.1_git20230722-r1.apk
+          EOF
+          find . -mindepth 1 -maxdepth 1 -name '*-13.1.1_git20230722-r1.apk' -print0 | xargs -0 apk add --root "$GITHUB_WORKSPACE/dart-sdk/sdk/build/linux/alpine-linux-riscv64-sysroot" --allow-untrusted --
+
       - name: Setup multiarch musl
         run: |
           cd dart-sdk/sdk
