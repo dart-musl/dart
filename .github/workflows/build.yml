@@ -159,17 +159,6 @@ jobs:
           cd dart-sdk/sdk
           find build/linux -mindepth 1 -maxdepth 1 -name 'alpine-*-sysroot' -print0 | xargs -0 -n 1 -I {} -- find {}/lib -mindepth 1 -maxdepth 1 \( -name 'ld-musl-*.so.1' -o -name 'libc.musl-*.so.1' \) -print0 | xargs -0 -n 1 -- sh -xc 'cp -u "$1" /lib' --
 
-      - name: Configure tcmalloc
-        run: |
-          if test -d dart-sdk/sdk/third_party/tcmalloc/gperftools; then
-            apk add --no-cache autoconf automake libtool
-            cd dart-sdk/sdk/third_party/tcmalloc/gperftools
-            ./autogen.sh
-            ./configure --enable-emergency-malloc --enable-frame-pointers --enable-cpu-profiler --disable-heap-checker --disable-debugalloc --enable-sized-delete --disable-libunwind
-            cd ../include
-            find . -type f -print0 | xargs -0 -n 1 -- sh -xc 'cp -f "../gperftools/src/$1" "$1"' --
-          fi
-
       - name: Build
         run: |
           cd dart-sdk/sdk
