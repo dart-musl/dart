@@ -46,19 +46,6 @@ jobs:
           python3 sdk/tools/generate_package_config.py
           python3 sdk/tools/generate_sdk_version_file.py
 
-      - name: Patch Dart SDK 3.0
-        run: |
-          cd dart-sdk/sdk
-          if grep -q alpine-linux-riscv64-sysroot build/config/sysroot.gni; then
-            exit 0
-          fi
-
-          xargs -n 1 -- sh -xc 'curl -fsSLo "$1" "https://github.com/dart-lang/sdk/raw/3.1.0-205.0.dev/$1"' -- <<'EOF'
-            build/config/sysroot.gni
-            build/linux/alpine_sysroot_scripts/install-sysroot.sh
-          EOF
-          chmod a+x build/linux/alpine_sysroot_scripts/install-sysroot.sh
-
       - name: Patch perfetto
         run: |
           cd dart-sdk/sdk
