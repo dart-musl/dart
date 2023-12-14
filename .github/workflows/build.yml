@@ -94,6 +94,7 @@ jobs:
           name: dart-${{ inputs.ref }}-${{ matrix.host-arch }}
           path: dart-${{ inputs.ref }}-${{ matrix.host-arch }}.tar.gz
           if-no-files-found: error
+          compression-level: 0
 
   build:
     needs: [archive]
@@ -191,6 +192,7 @@ jobs:
           name: dartsdk-linux-${{ matrix.target-arch }}-${{ inputs.ref }}
           path: dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz
           if-no-files-found: error
+          compression-level: 0
 
   tag:
     needs: [build]
