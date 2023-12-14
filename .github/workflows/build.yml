@@ -89,7 +89,7 @@ jobs:
           python3 dart-sdk/sdk/tools/linux_dist_support/create_tarball.py --tar_filename dart-${{ inputs.ref }}-${{ matrix.host-arch }}.tar.gz
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dart-${{ inputs.ref }}-${{ matrix.host-arch }}
           path: dart-${{ inputs.ref }}-${{ matrix.host-arch }}.tar.gz
@@ -186,7 +186,7 @@ jobs:
           tar -czf dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz -C dart-sdk/sdk/out/Release* -- dart-sdk
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dartsdk-linux-${{ matrix.target-arch }}-${{ inputs.ref }}
           path: dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz
