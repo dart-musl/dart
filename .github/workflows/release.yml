@@ -21,27 +21,27 @@ jobs:
 
     steps:
       - name: Download Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dartsdk-linux-x64-${{ github.ref_name }}
 
       - name: Download Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dartsdk-linux-ia32-${{ github.ref_name }}
 
       - name: Download Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dartsdk-linux-arm64-${{ github.ref_name }}
 
       - name: Download Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dartsdk-linux-arm-${{ github.ref_name }}
 
       - name: Download Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dartsdk-linux-riscv64-${{ github.ref_name }}
 
