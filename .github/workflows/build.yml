@@ -46,17 +46,6 @@ jobs:
           python3 sdk/tools/generate_package_config.py
           python3 sdk/tools/generate_sdk_version_file.py
 
-      - name: Patch perfetto
-        run: |
-          cd dart-sdk/sdk
-          if grep -q cstdint third_party/perfetto/include/perfetto/ext/base/uuid.h; then
-            exit 0
-          fi
-
-          xargs -n 1 -- sh -xc 'curl -fsSL "https://github.com/google/perfetto/commit/$1.diff" | git apply --directory third_party/perfetto -' -- <<'EOF'
-            07b15988f07b9d2c4019c61e7ec5b372a8daa81a
-          EOF
-
       - name: Get Checked-in Dart SDK Version
         id: version
         run: |
