@@ -46,7 +46,7 @@ jobs:
           name: dartsdk-linux-riscv64-${{ github.ref_name }}
 
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           prerelease: ${{ endsWith(github.ref_name, '.beta') || endsWith(github.ref_name, '.dev') }}
           files: |
