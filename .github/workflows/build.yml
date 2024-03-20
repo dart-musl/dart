@@ -133,6 +133,20 @@ jobs:
         run: |
           apk add --no-cache alpine-sdk bash clang curl gn lld llvm python3
 
+      - name: Setup multiarch
+        run: |
+          cd "$(mktemp -d)"
+          case ${{ matrix.host-arch }} in
+            arm64)
+              apk add --root . --repositories-file /etc/apk/repositories --allow-untrusted --arch armv7 --no-cache --no-scripts --initdb -- musl
+            ;;
+            x64)
+              apk add --root . --repositories-file /etc/apk/repositories --allow-untrusted --arch x86 --no-cache --no-scripts --initdb -- musl
+            ;;
+          esac
+          find lib -mindepth 1 -maxdepth 1 -name '*.so.*' -print0 | xargs -0 -n 1 -- sh -xc 'cp -u "$1" /lib' --
+          rm -rf "$(pwd)"
+
       - name: Install default sysroots
         run: |
           cd dart-sdk/sdk
@@ -221,11 +235,6 @@ jobs:
             zstd-libs-1.5.5-r8.apk
           EOF
           find . -mindepth 1 -maxdepth 1 -name '*.apk' -print0 | xargs -0 apk add --root "$GITHUB_WORKSPACE/dart-sdk/sdk/build/linux/alpine-linux-riscv64-sysroot" --allow-untrusted --no-scripts --initdb --
-
-      - name: Setup multiarch musl
-        run: |
-          cd dart-sdk/sdk
-          find build/linux -mindepth 1 -maxdepth 1 -name 'alpine-*-sysroot' -print0 | xargs -0 -n 1 -I {} -- find {}/lib -mindepth 1 -maxdepth 1 \( -name 'ld-musl-*.so.1' -o -name 'libc.musl-*.so.1' \) -print0 | xargs -0 -n 1 -- sh -xc 'cp -u "$1" /lib' --
 
       - name: Build
         run: |
