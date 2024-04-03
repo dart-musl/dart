@@ -204,7 +204,11 @@ jobs:
       - name: Build
         run: |
           cd dart-sdk/sdk
-          ./tools/build.py --no-goma --mode release --arch ${{ matrix.target-arch }} --gn-args 'dart_snapshot_kind="app-jit"' --gn-args 'dart_sysroot="alpine"' create_sdk
+          if test -f build/toolchain/goma.gni; then
+            ./tools/build.py --no-goma --mode release --arch ${{ matrix.target-arch }} --gn-args 'dart_snapshot_kind="app-jit"' --gn-args 'dart_sysroot="alpine"' create_sdk
+          else
+            ./tools/build.py --mode release --arch ${{ matrix.target-arch }} --gn-args 'dart_snapshot_kind="app-jit"' --gn-args 'dart_sysroot="alpine"' create_sdk
+          fi
 
       - name: Archive
         run: |
