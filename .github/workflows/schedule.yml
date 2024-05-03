@@ -35,7 +35,7 @@ jobs:
     steps:
       - name: Get ${{ matrix.channel }} release
         run: |
-          curl -fsSL "https://storage.googleapis.com/dart-archive/channels/${{ matrix.channel }}/release/latest/VERSION" | tee -a VERSION
+          curl -fsSL "https://storage.googleapis.com/dart-archive/channels/${{ matrix.channel }}/release/latest/VERSION" | tee VERSION
 
       - name: Get ${{ matrix.channel }} version
         id: version
