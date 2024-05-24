@@ -42,9 +42,7 @@ jobs:
           mkdir dart-sdk
           cd dart-sdk
           gclient config --name sdk https://dart.googlesource.com/sdk.git@${{ inputs.ref }}
-          gclient sync --no-history --nohooks
-          python3 sdk/tools/generate_package_config.py
-          python3 sdk/tools/generate_sdk_version_file.py
+          gclient sync --no-history
 
       - name: Get Checked-in Dart SDK Version
         id: version
