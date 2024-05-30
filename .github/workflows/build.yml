@@ -89,7 +89,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: docker.io/library/alpine:${{ matrix.target-arch == 'riscv64' && 'edge' || 'latest' }}
+      image: docker.io/library/alpine
 
     strategy:
       fail-fast: false
@@ -130,6 +130,11 @@ jobs:
       - name: Install build tools
         run: |
           apk add --no-cache -- bash clang curl git gn lld llvm python3
+
+      - name: Install build tools
+        if: matrix.target-arch == 'riscv64'
+        run: |
+          apk upgrade --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main -- lld 
 
       - name: Setup multiarch
         run: |
