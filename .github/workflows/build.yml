@@ -131,6 +131,7 @@ jobs:
         run: |
           apk add --no-cache -- bash clang curl git gn lld llvm python3
 
+      # TODO: remove once lld 18 is available in alpine stable
       - name: Install build tools
         if: matrix.target-arch == 'riscv64'
         run: |
@@ -153,13 +154,7 @@ jobs:
       - name: Install default sysroots
         run: |
           cd dart-sdk/sdk
-          ./build/linux/alpine_sysroot_scripts/install-sysroot.sh
-
-      - name: Install riscv64 sysroot
-        if: matrix.target-arch == 'riscv64'
-        run: |
-          cd dart-sdk/sdk
-          ./build/linux/alpine_sysroot_scripts/install-sysroot.sh riscv64
+          ./build/linux/alpine_sysroot_scripts/install-sysroot.sh x86_64 x86 aarch64 armv7 riscv64
 
       - name: Build
         run: |
