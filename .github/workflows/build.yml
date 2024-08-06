@@ -154,16 +154,12 @@ jobs:
       - name: Install sysroots
         run: |
           cd dart-sdk/sdk
-          ./build/linux/alpine_sysroot_scripts/install-sysroot.sh x86_64 x86 aarch64 armv7 riscv64
+          ./build/linux/alpine_sysroot_scripts/install-sysroot.sh
 
       - name: Build
         run: |
           cd dart-sdk/sdk
-          if test -f build/toolchain/goma.gni; then
-            ./tools/build.py --no-goma --mode release --arch ${{ matrix.target-arch }} --gn-args 'dart_snapshot_kind="app-jit"' --gn-args 'dart_sysroot="alpine"' create_sdk
-          else
-            ./tools/build.py --mode release --arch ${{ matrix.target-arch }} --gn-args 'dart_snapshot_kind="app-jit"' --gn-args 'dart_sysroot="alpine"' create_sdk
-          fi
+          ./tools/build.py --mode release --arch ${{ matrix.target-arch }} --gn-args 'dart_snapshot_kind="app-jit"' --gn-args 'dart_sysroot="alpine"' create_sdk
 
       - name: Archive
         run: |
