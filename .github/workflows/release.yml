@@ -68,6 +68,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dartsdk-linux-x64-${{ github.ref_name }}
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dartsdk-linux-ia32-${{ github.ref_name }}
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dartsdk-linux-arm64-${{ github.ref_name }}
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dartsdk-linux-arm-${{ github.ref_name }}
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dartsdk-linux-riscv64-${{ github.ref_name }}
+
       - name: Docker Metadata
         id: docker-metadata
         uses: docker/metadata-action@v5
@@ -99,8 +124,6 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          build-args: |
-            BASEURL=${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}
           context: .
           platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7,linux/riscv64
           push: ${{ !endsWith(github.ref_name, '.beta') && !endsWith(github.ref_name, '.dev') }}

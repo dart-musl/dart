@@ -1,11 +1,10 @@
 FROM docker.io/library/alpine
 
-ARG BASEURL
-
 ENV DART_SDK=/usr/lib/dart
 ENV PATH=$DART_SDK/bin:$PATH
 
-RUN apk add --no-cache \
+RUN --mount=type=bind,source=.,target=/build \
+    apk add --no-cache \
             ca-certificates \
             curl \
             git \
@@ -22,6 +21,5 @@ RUN apk add --no-cache \
       riscv64) \
         SDK_ARCH=riscv64;; \
     esac \
- && wget -O- "$BASEURL/dartsdk-linux-$SDK_ARCH-release.tar.gz" \
-  | tar -xz \
+ && tar -xzf /build/dartsdk-linux-$SDK_ARCH-release.tar.gz \
  && mv dart-sdk "$DART_SDK"
