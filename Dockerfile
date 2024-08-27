@@ -2,8 +2,8 @@ FROM docker.io/library/alpine
 
 ARG BASEURL
 
-ENV DART_SDK /usr/lib/dart
-ENV PATH $DART_SDK/bin:$PATH
+ENV DART_SDK=/usr/lib/dart
+ENV PATH=$DART_SDK/bin:$PATH
 
 RUN apk add --no-cache \
             ca-certificates \
