@@ -23,38 +23,14 @@ jobs:
       - name: Download Artifact
         uses: actions/download-artifact@v4
         with:
-          name: dartsdk-linux-x64-${{ github.ref_name }}
-
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dartsdk-linux-ia32-${{ github.ref_name }}
-
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dartsdk-linux-arm64-${{ github.ref_name }}
-
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dartsdk-linux-arm-${{ github.ref_name }}
-
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dartsdk-linux-riscv64-${{ github.ref_name }}
+          pattern: dartsdk-linux-*-${{ github.ref_name }}
 
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           prerelease: ${{ endsWith(github.ref_name, '.beta') || endsWith(github.ref_name, '.dev') }}
           files: |
-            dartsdk-linux-x64-release.tar.gz
-            dartsdk-linux-ia32-release.tar.gz
-            dartsdk-linux-arm64-release.tar.gz
-            dartsdk-linux-arm-release.tar.gz
-            dartsdk-linux-riscv64-release.tar.gz
+            dartsdk-linux-*/dartsdk-linux-*-release.tar.gz
 
   container:
     needs: [release]
@@ -71,27 +47,10 @@ jobs:
       - name: Download Artifact
         uses: actions/download-artifact@v4
         with:
-          name: dartsdk-linux-x64-${{ github.ref_name }}
+          pattern: dartsdk-linux-*-${{ github.ref_name }}
 
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dartsdk-linux-ia32-${{ github.ref_name }}
-
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dartsdk-linux-arm64-${{ github.ref_name }}
-
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dartsdk-linux-arm-${{ github.ref_name }}
-
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dartsdk-linux-riscv64-${{ github.ref_name }}
+      - name: Prepare
+        run: mv dartsdk-linux-*/dartsdk-linux-*-release.tar.gz .
 
       - name: Docker Metadata
         id: docker-metadata
@@ -109,7 +68,7 @@ jobs:
             type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/0.') }}
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        run: docker run --privileged --rm registry.fedoraproject.org/fedora-minimal /bin/sh -c "microdnf install --assumeyes --nodocs --setopt=install_weak_deps=False qemu-user-static systemd-udev && mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc && /usr/lib/systemd/systemd-binfmt --unregister && /usr/lib/systemd/systemd-binfmt"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
