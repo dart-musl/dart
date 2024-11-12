@@ -9,7 +9,7 @@ RUN --mount=type=bind,source=.,target=/build \
             curl \
             git \
             openssh-client \
- && case "$(cat /etc/apk/arch)" in \
+ && case "$(apk --print-arch)" in \
       x86_64) \
         SDK_ARCH=x64;; \
       x86) \
