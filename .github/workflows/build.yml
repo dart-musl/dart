@@ -56,6 +56,16 @@ jobs:
           cd dart-sdk/sdk
           ./tools/sdks/dart-sdk/bin/dart run /tmp/version.dart | tee -a $GITHUB_OUTPUT
 
+      - name: Patch
+        run: |
+          cd dart-sdk/sdk
+          if grep -q cxx_version_17 third_party/binaryen/BUILD.gn; then
+            exit 0
+          fi
+          xargs -n 1 -- sh -xc 'curl -fsSL "https://github.com/dart-lang/sdk/commit/$1.diff" | git apply -' -- <<'EOF'
+            4928d75fb9fcdd57d6d22baab96d9f0a2daee12b
+          EOF
+
       - name: Fetch Checked-in Dart SDK
         run: |
           if curl -fsSLO ${{ github.server_url }}/${{ github.repository }}/releases/download/${{ steps.version.outputs.version }}/dartsdk-linux-${{ matrix.host-arch }}-release.tar.gz; then
