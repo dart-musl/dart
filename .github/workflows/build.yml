@@ -131,12 +131,6 @@ jobs:
         run: |
           apk add --no-cache -- bash clang curl git gn lld llvm python3
 
-      # TODO: remove once lld 18 is available in alpine stable
-      - name: Install riscv64 build tools
-        if: matrix.target-arch == 'riscv64'
-        run: |
-          apk upgrade --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/main -- lld 
-
       - name: Install sysroots
         run: |
           cd dart-sdk/sdk
