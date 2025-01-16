@@ -17,7 +17,7 @@ on:
 
 jobs:
   archive:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     container:
       image: docker.io/library/debian
@@ -27,6 +27,9 @@ jobs:
       matrix:
         include:
           - host-arch: x64
+            os: ubuntu-latest
+          - host-arch: arm64
+            os: ubuntu-24.04-arm
 
     steps:
       - name: Install build tools
