@@ -35,6 +35,7 @@ jobs:
 
     steps:
       - name: Get ${{ matrix.channel }} version
+        id: version
         run: |
           if ${{ matrix.channel == 'edge' && 'true' || 'false' }}; then
             git ls-remote https://dart.googlesource.com/sdk.git HEAD | tee HEAD
