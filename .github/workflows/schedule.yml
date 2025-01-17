@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        channel: [stable, beta, dev]
+        channel: [stable, beta, dev, edge]
 
     outputs:
       stable-version: ${{ steps.version.outputs.stable-version }}
@@ -31,24 +31,27 @@ jobs:
       beta-cache-hit: ${{ steps.cache.outputs.beta-cache-hit }}
       dev-version: ${{ steps.version.outputs.dev-version }}
       dev-cache-hit: ${{ steps.cache.outputs.dev-cache-hit }}
+      edge-version: ${{ steps.version.outputs.edge-version }}
 
     steps:
-      - name: Get ${{ matrix.channel }} release
-        run: |
-          curl -fsSL "https://storage.googleapis.com/dart-archive/channels/${{ matrix.channel }}/release/latest/VERSION" | tee VERSION
-
       - name: Get ${{ matrix.channel }} version
-        id: version
         run: |
-          echo "${{ matrix.channel }}-version=$(yq .version VERSION)" | tee -a $GITHUB_OUTPUT
+          if ${{ matrix.channel == 'edge' && 'true' || 'false' }}; then
+            git ls-remote https://dart.googlesource.com/sdk.git HEAD | tee HEAD
+            echo "${{ matrix.channel }}-version=$(cut -f 1 HEAD)" | tee -a "$GITHUB_OUTPUT"
+          else
+            curl -fsSL "https://storage.googleapis.com/dart-archive/channels/${{ matrix.channel }}/release/latest/VERSION" | tee VERSION
+            echo "${{ matrix.channel }}-version=$(yq .version VERSION)" | tee -a "$GITHUB_OUTPUT"
+          fi
 
       - name: Cache
         id: cache
+        if: matrix.channel != 'edge'
         run: |
           if ${{ github.event.schedule && 'true' || 'false' }} && curl -fsSLo /dev/null "${{ github.server_url }}/${{ github.repository }}/releases/tag/$(yq .version VERSION)"; then
-            echo "${{ matrix.channel }}-cache-hit=true" | tee -a $GITHUB_OUTPUT
+            echo "${{ matrix.channel }}-cache-hit=true" | tee -a "$GITHUB_OUTPUT"
           else
-            echo "${{ matrix.channel }}-cache-hit=false" | tee -a $GITHUB_OUTPUT
+            echo "${{ matrix.channel }}-cache-hit=false" | tee -a "$GITHUB_OUTPUT"
           fi
 
   stable:
@@ -75,8 +78,8 @@ jobs:
       ref: ${{ needs.latest.outputs.dev-version }}
     secrets: inherit
 
-  main:
+  edge:
     needs: [latest]
     uses: ./.github/workflows/build.yml
     with:
-      ref: main
+      ref: ${{ needs.latest.outputs.edge-version }}
