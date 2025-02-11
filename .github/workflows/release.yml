@@ -84,7 +84,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7,linux/riscv64
+          platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/riscv64
           push: ${{ !endsWith(github.ref_name, '.beta') && !endsWith(github.ref_name, '.dev') }}
           tags: ${{ steps.docker-metadata.outputs.tags }}
           labels: ${{ steps.docker-metadata.outputs.labels }}
