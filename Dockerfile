@@ -12,8 +12,6 @@ RUN --mount=type=bind,source=.,target=/build \
  && case "$(apk --print-arch)" in \
       x86_64) \
         SDK_ARCH=x64;; \
-      x86) \
-        SDK_ARCH=ia32;; \
       aarch64) \
         SDK_ARCH=arm64;; \
       armv7) \
