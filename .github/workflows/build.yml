@@ -55,7 +55,7 @@ jobs:
           }
           EOF
           cd dart-sdk/sdk
-          ./tools/sdks/dart-sdk/bin/dart run /tmp/version.dart | tee -a $GITHUB_OUTPUT
+          ./tools/sdks/dart-sdk/bin/dart run /tmp/version.dart | tee -a "$GITHUB_OUTPUT"
 
       - name: Fetch Checked-in Dart SDK
         run: |
@@ -88,6 +88,10 @@ jobs:
     needs: [archive]
 
     runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      attestations: write
 
     container:
       image: docker.io/library/alpine
@@ -150,6 +154,11 @@ jobs:
       - name: Archive
         run: |
           tar -czf dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz -C dart-sdk/sdk/out/Release* -- dart-sdk
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
