@@ -64,7 +64,7 @@ jobs:
         run: |
           if curl -fsSLO ${{ github.server_url }}/${{ github.repository }}/releases/download/${{ steps.version.outputs.version }}/dartsdk-linux-${{ matrix.host-arch }}-release.tar.gz; then
             # TODO: attestation are published for dart >=3.7.0, so allow it fail for now.
-            gh attestation verify dartsdk-linux-${{ matrix.host-arch }}-release.tar.gz --repo ${{ github.repository }} || true
+            gh attestation verify dartsdk-linux-${{ matrix.host-arch }}-release.tar.gz --repo ${{ github.repository }} --signer-workflow ${{ github.repository }}/.github/workflows/build.yml@refs/tags/${{ steps.version.outputs.version }} || true
             rm -rf dart-sdk/sdk/tools/sdks/dart-sdk
             tar -xzf dartsdk-linux-${{ matrix.host-arch }}-release.tar.gz -C dart-sdk/sdk/tools/sdks
           fi
