@@ -54,8 +54,7 @@ jobs:
             print('version=' + Platform.version.split(' ')[0]);
           }
           EOF
-          cd dart-sdk/sdk
-          ./tools/sdks/dart-sdk/bin/dart run /tmp/version.dart | tee -a "$GITHUB_OUTPUT"
+          dart-sdk/sdk/tools/sdks/dart-sdk/bin/dart run /tmp/version.dart | tee -a "$GITHUB_OUTPUT"
 
       - name: Fetch Checked-in Dart SDK
         run: |
