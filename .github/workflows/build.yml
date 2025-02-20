@@ -68,6 +68,8 @@ jobs:
             rm -rf dart-sdk/sdk/tools/sdks/dart-sdk
             tar -xzf dartsdk-linux-${{ matrix.host-arch }}-release.tar.gz -C dart-sdk/sdk/tools/sdks
           fi
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Remove build tools
         run: |
