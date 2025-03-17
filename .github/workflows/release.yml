@@ -8,8 +8,9 @@ on:
 jobs:
   build:
     permissions:
-      id-token: write
+      actions: write
       attestations: write
+      id-token: write
     uses: ./.github/workflows/build.yml
     with:
       ref: ${{ github.ref_name }}

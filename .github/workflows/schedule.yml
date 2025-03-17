@@ -59,8 +59,9 @@ jobs:
     needs: [latest]
     if: needs.latest.outputs.stable-cache-hit != 'true'
     permissions:
-      id-token: write
+      actions: write
       attestations: write
+      id-token: write
     uses: ./.github/workflows/build.yml
     with:
       ref: ${{ needs.latest.outputs.stable-version }}
@@ -70,8 +71,9 @@ jobs:
     needs: [latest]
     if: needs.latest.outputs.beta-cache-hit != 'true' && needs.latest.outputs.beta-version != needs.latest.outputs.stable-version
     permissions:
-      id-token: write
+      actions: write
       attestations: write
+      id-token: write
     uses: ./.github/workflows/build.yml
     with:
       ref: ${{ needs.latest.outputs.beta-version }}
@@ -81,8 +83,9 @@ jobs:
     needs: [latest]
     if: needs.latest.outputs.dev-cache-hit != 'true' && needs.latest.outputs.dev-version != needs.latest.outputs.beta-version && needs.latest.outputs.dev-version != needs.latest.outputs.stable-version
     permissions:
-      id-token: write
+      actions: write
       attestations: write
+      id-token: write
     uses: ./.github/workflows/build.yml
     with:
       ref: ${{ needs.latest.outputs.dev-version }}
@@ -91,8 +94,9 @@ jobs:
   edge:
     needs: [latest]
     permissions:
-      id-token: write
+      actions: write
       attestations: write
+      id-token: write
     uses: ./.github/workflows/build.yml
     with:
       ref: ${{ needs.latest.outputs.edge-version }}

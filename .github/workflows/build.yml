@@ -67,6 +67,8 @@ jobs:
             gh attestation verify dartsdk-linux-${{ matrix.host-arch }}-release.tar.gz --repo ${{ github.repository }} --signer-workflow ${{ github.repository }}/.github/workflows/build.yml@refs/tags/${{ steps.version.outputs.version }} || true
             rm -rf dart-sdk/sdk/tools/sdks/dart-sdk
             tar -xzf dartsdk-linux-${{ matrix.host-arch }}-release.tar.gz -C dart-sdk/sdk/tools/sdks
+          else
+            gh workflow run build.yml --repo ${{ github.repository }} --raw-field ref=${{ steps.version.outputs.version }}
           fi
         env:
           GH_TOKEN: ${{ github.token }}
@@ -97,8 +99,9 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      id-token: write
+      actions: write
       attestations: write
+      id-token: write
 
     container:
       image: docker.io/library/alpine
