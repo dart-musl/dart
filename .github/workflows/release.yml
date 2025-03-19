@@ -30,11 +30,10 @@ jobs:
           pattern: dartsdk-linux-*-${{ github.ref_name }}
 
       - name: Release
-        uses: softprops/action-gh-release@v2
-        with:
-          prerelease: ${{ endsWith(github.ref_name, '.beta') || endsWith(github.ref_name, '.dev') }}
-          files: |
-            dartsdk-linux-*/dartsdk-linux-*-release.tar.gz
+        run: |
+          gh release create ${{ github.ref_name }} --prerelease=${{ endsWith(github.ref_name, '.beta') || endsWith(github.ref_name, '.dev') }} dartsdk-linux-*/dartsdk-linux-*-release.tar.gz
+        env:
+          GH_TOKEN: ${{ github.token }}            
 
   container:
     needs: [release]
