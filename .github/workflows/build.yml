@@ -28,6 +28,8 @@ jobs:
         include:
           - host-arch: x64
             os: ubuntu-latest
+          - host-arch: arm64
+            os: ubuntu-24.04-arm
 
     steps:
       - name: Install build tools
@@ -95,7 +97,7 @@ jobs:
   build:
     needs: [archive]
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     permissions:
       actions: write
@@ -111,16 +113,24 @@ jobs:
         include:
           - host-arch: x64
             target-arch: x64
+            os: ubuntu-latest
           - host-arch: x64
             target-arch: ia32
-          - host-arch: x64
+            os: ubuntu-latest
+          - host-arch: arm64
             target-arch: arm64
+            os: ubuntu-24.04-arm
           - host-arch: x64
             target-arch: arm
+            os: ubuntu-latest
           - host-arch: x64
             target-arch: riscv64
+            os: ubuntu-latest
 
     steps:
+      - name: Setup node:alpine for JavaScript Actions
+        uses: dart-musl/setup-node-alpine-for-javascript-actions@v1
+
       - name: Download Artifact
         uses: actions/download-artifact@v4
         with:
