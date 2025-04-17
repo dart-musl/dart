@@ -114,9 +114,6 @@ jobs:
           - host-arch: x64
             target-arch: x64
             os: ubuntu-latest
-          - host-arch: x64
-            target-arch: ia32
-            os: ubuntu-latest
           - host-arch: arm64
             target-arch: arm64
             os: ubuntu-24.04-arm
