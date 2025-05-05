@@ -28,10 +28,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: dartsdk-linux-*-${{ github.ref_name }}
+          merge-multiple: true
 
       - name: Release
         run: |
-          gh release create ${{ github.ref_name }} dartsdk-linux-*/dartsdk-linux-*-release.tar.gz --repo ${{ github.repository }} --prerelease=${{ endsWith(github.ref_name, '.beta') || endsWith(github.ref_name, '.dev') }}
+          gh release create ${{ github.ref_name }} dartsdk-linux-*-release.tar.gz --repo ${{ github.repository }} --prerelease=${{ endsWith(github.ref_name, '.beta') || endsWith(github.ref_name, '.dev') }}
         env:
           GH_TOKEN: ${{ github.token }}
 
