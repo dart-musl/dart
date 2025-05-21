@@ -117,9 +117,9 @@ jobs:
           - host-arch: arm64
             target-arch: arm64
             os: ubuntu-24.04-arm
-          - host-arch: x64
+          - host-arch: arm64
             target-arch: arm
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
           - host-arch: x64
             target-arch: riscv64
             os: ubuntu-latest
@@ -157,21 +157,10 @@ jobs:
           cd dart-sdk/sdk
           ./build/linux/alpine_sysroot_scripts/install-sysroot.sh
 
-      - name: Install x86 sysroot
-        if: matrix.host-arch == 'x64' && matrix.target-arch == 'arm'
-        run: |
-          cd dart-sdk/sdk
-          ./build/linux/alpine_sysroot_scripts/install-sysroot.sh x86
-
-      - name: Setup multiarch
-        run: |
-          cd dart-sdk/sdk
-          find buildtools/sysroot -mindepth 1 -maxdepth 1 -name 'alpine-linux-*' -print0 | xargs -0 -n 1 -I {} -- find {}/lib -mindepth 1 -maxdepth 1 \( -name 'ld-musl-*.so.1' -o -name 'libc.musl-*.so.1' \) -print0 | xargs -0 -n 1 -- sh -xc 'cp -u "$1" /lib' --
-
       - name: Build
         run: |
           cd dart-sdk/sdk
-          ./tools/build.py --mode release --arch ${{ matrix.target-arch }} --gn-args 'dart_snapshot_kind="app-jit"' --gn-args 'dart_sysroot="alpine"' create_sdk
+          ./tools/build.py --mode release --arch ${{ matrix.target-arch }} --gn-args 'dart_sysroot="alpine"' create_sdk
 
       - name: Archive
         run: |
