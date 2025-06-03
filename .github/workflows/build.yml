@@ -84,7 +84,7 @@ jobs:
 
       - name: Archive
         run: |
-          python3 dart-sdk/sdk/tools/linux_dist_support/create_tarball.py --tar_filename dart-${{ inputs.ref }}-${{ matrix.host-arch }}.tar.gz
+          tar -czf dart-${{ inputs.ref }}-${{ matrix.host-arch }}.tar.gz dart-sdk
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -135,10 +135,7 @@ jobs:
 
       - name: Unarchive
         run: |
-          mkdir dart-sdk
-          cd dart-sdk
-          tar -xzf ../dart-${{ inputs.ref }}-${{ matrix.host-arch }}.tar.gz --strip-components=1
-          mv dart sdk
+          tar -xzf dart-${{ inputs.ref }}-${{ matrix.host-arch }}.tar.gz
 
       - name: Verify Checked-in Dart SDK
         run: |
