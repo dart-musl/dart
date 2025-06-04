@@ -20,4 +20,8 @@ RUN --mount=type=bind,source=.,target=/build \
         SDK_ARCH=riscv64;; \
     esac \
  && tar -xzf /build/dartsdk-linux-$SDK_ARCH-release.tar.gz \
- && mv dart-sdk "$DART_SDK"
+ && mv dart-sdk "$DART_SDK" \
+ && DART_SDK_CACHE="$HOME/.dart/$(cat "$DART_SDK/version")" \
+ && mkdir -p "$DART_SDK_CACHE" \
+ && cd "$DART_SDK_CACHE" \
+ && echo x64 arm64 arm riscv64 | xargs -n 1 sh -c 'if [ "$1" != "$2" ]; then tar -xzf /build/dartsdk-linux-$2-release.tar.gz --strip-components 2 -- dart-sdk/bin/dartaotruntime && mv dartaotruntime dartaotruntime_linux_$2 && if [ "$1" != arm ]; then tar -xzf /build/dartsdk-linux-$1-linux-$2-release.tar.gz --strip-components 3 -- dart-sdk/bin/utils/gen_snapshot && mv gen_snapshot gen_snapshot_linux_$1_linux_$2; fi; fi' -- $SDK_ARCH
