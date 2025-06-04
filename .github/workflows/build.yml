@@ -52,13 +52,8 @@ jobs:
       - name: Get Checked-in Dart SDK Version
         id: version
         run: |
-          tee /tmp/version.dart <<'EOF'
-          import 'dart:io' show Platform;
-          void main() {
-            print('version=' + Platform.version.split(' ')[0]);
-          }
-          EOF
-          dart-sdk/sdk/tools/sdks/dart-sdk/bin/dart run /tmp/version.dart | tee -a "$GITHUB_OUTPUT"
+          cd dart-sdk/sdk
+          echo "version=$(cat tools/sdks/dart-sdk/version)" | tee -a "$GITHUB_OUTPUT"
 
       - name: Fetch Checked-in Dart SDK
         run: |
