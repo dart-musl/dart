@@ -106,52 +106,12 @@ jobs:
         include:
           - host-arch: arm64
             target-arch: arm
-            target: create_sdk
           - host-arch: arm64
             target-arch: arm64
-            target: create_sdk
           - host-arch: x64
             target-arch: riscv64
-            target: create_sdk
           - host-arch: x64
             target-arch: x64
-            target: create_sdk
-          - host-arch: arm64
-            target-arch: arm64
-            dart-target-arch: arm
-            target: copy_gen_snapshot
-          - host-arch: x64
-            target-arch: riscv64
-            dart-target-arch: arm
-            target: copy_gen_snapshot
-          - host-arch: x64
-            target-arch: x64
-            dart-target-arch: arm
-            target: copy_gen_snapshot
-          - host-arch: x64
-            target-arch: riscv64
-            dart-target-arch: arm64
-            target: copy_gen_snapshot
-          - host-arch: x64
-            target-arch: x64
-            dart-target-arch: arm64
-            target: copy_gen_snapshot
-          - host-arch: arm64
-            target-arch: arm64
-            dart-target-arch: riscv64
-            target: copy_gen_snapshot
-          - host-arch: x64
-            target-arch: x64
-            dart-target-arch: riscv64
-            target: copy_gen_snapshot
-          - host-arch: arm64
-            target-arch: arm64
-            dart-target-arch: x64
-            target: copy_gen_snapshot
-          - host-arch: x64
-            target-arch: riscv64
-            dart-target-arch: x64
-            target: copy_gen_snapshot
 
     steps:
       - name: Setup node:alpine for JavaScript Actions
@@ -186,23 +146,29 @@ jobs:
       - name: Build
         run: |
           cd dart-sdk/sdk
-          ./tools/build.py --mode release --arch ${{ matrix.target-arch }} --gn-args 'dart_sysroot="alpine"'${{ matrix.dart-target-arch && format(' --gn-args ''dart_target_arch="{0}"''', matrix.dart-target-arch) }} ${{ matrix.target }}
+          ./tools/build.py --mode release --arch ${{ matrix.target-arch }} --gn-args 'dart_sysroot="alpine"' create_sdk
 
       - name: Archive
         run: |
-          tar -czf dartsdk-linux-${{ matrix.target-arch }}${{ matrix.dart-target-arch && format('-linux-{0}', matrix.dart-target-arch) }}-release.tar.gz -C dart-sdk/sdk/out/Release* -- dart-sdk
+          tar -czf dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz -C dart-sdk/sdk/out/Release* -- dart-sdk
+          mkdir exe.stripped
+          find dart-sdk/sdk/out/Release*/exe.stripped \( -name dartaotruntime_product -o -name 'gen_snapshot_product_linux_*' -not -name gen_snapshot_product_linux_${{ matrix.target-arch }} \) -print0 | xargs -0 -r -n 1 sh -c 'cp "$1" "exe.stripped/$(basename "$1" | sed -e "s/product/linux_${{ matrix.target-arch }}/")"' --
 
       - name: Generate artifact attestation
         if: github.ref_type == 'tag'
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: dartsdk-linux-${{ matrix.target-arch }}${{ matrix.dart-target-arch && format('-linux-{0}', matrix.dart-target-arch) }}-release.tar.gz
+          subject-path: |
+            dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz
+            exe.stripped/*
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: dartsdk-linux-${{ matrix.target-arch }}${{ matrix.dart-target-arch && format('-linux-{0}', matrix.dart-target-arch) }}-${{ inputs.ref }}
-          path: dartsdk-linux-${{ matrix.target-arch }}${{ matrix.dart-target-arch && format('-linux-{0}', matrix.dart-target-arch) }}-release.tar.gz
+          name: dartsdk-linux-${{ matrix.target-arch }}-${{ inputs.ref }}
+          path: |
+            dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz
+            exe.stripped/*
           if-no-files-found: error
           compression-level: 0
 
