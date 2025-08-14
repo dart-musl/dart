@@ -151,8 +151,7 @@ jobs:
       - name: Archive
         run: |
           tar -czf dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz -C dart-sdk/sdk/out/Release* -- dart-sdk
-          mkdir exe.stripped
-          find dart-sdk/sdk/out/Release*/exe.stripped \( -name dartaotruntime_product -o -name 'gen_snapshot_product_linux_*' -not -name gen_snapshot_product_linux_${{ matrix.target-arch }} \) -print0 | xargs -0 -n 1 sh -c 'cp "$1" "exe.stripped/$(basename "$1" | sed -e "s/product/linux_${{ matrix.target-arch }}/")"' --
+          find dart-sdk/sdk/out/Release*/exe.stripped \( -name dartaotruntime_product -o -name 'gen_snapshot_product_linux_*' -not -name gen_snapshot_product_linux_${{ matrix.target-arch }} \) -print0 | xargs -0 -n 1 sh -c 'cp "$1" "$(basename "$1" | sed -e "s/product/linux_${{ matrix.target-arch }}/")"' --
 
       - name: Generate artifact attestation
         if: github.ref_type == 'tag'
@@ -160,21 +159,17 @@ jobs:
         with:
           subject-path: |
             dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz
-            exe.stripped/*
+            dartaotruntime_linux_*
+            gen_snapshot_linux_*
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: dartsdk-cache-linux-${{ matrix.target-arch }}-${{ inputs.ref }}
-          path: exe.stripped/*
-          if-no-files-found: error
-          compression-level: 0
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dartsdk-linux-${{ matrix.target-arch }}-${{ inputs.ref }}
-          path: dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz
+          path: |
+            dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz
+            dartaotruntime_linux_*
+            gen_snapshot_linux_*
           if-no-files-found: error
           compression-level: 0
 
