@@ -165,7 +165,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: dartsdk-cache-linux-${{ matrix.target-arch }}-${{ inputs.ref }}
+          name: dartsdk-linux-${{ matrix.target-arch }}-${{ inputs.ref }}
           path: |
             dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz
             dartaotruntime_linux_*
