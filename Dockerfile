@@ -24,4 +24,4 @@ RUN --mount=type=bind,source=.,target=/build \
  && DART_SDK_CACHE="$HOME/.dart/$(cat "$DART_SDK/version")" \
  && mkdir -p "$DART_SDK_CACHE" \
  && cd "$DART_SDK_CACHE" \
- && echo x64 arm64 arm riscv64 | xargs -n 1 sh -c 'if [ "$1" != arm ] && [ "$1" != "$2" ]; then cp "/build/dartaotruntime_linux_$2" . && chmod a+x "dartaotruntime_linux_$2" && cp "/build/gen_snapshot_linux_$1_linux_$2" && chmod a+x "gen_snapshot_linux_$1_linux_$2"; fi' -- "$SDK_ARCH"
+ && echo x64 arm64 arm riscv64 | xargs -n 1 sh -c 'if [ "$1" != arm ] && [ "$1" != "$2" ]; then cp "/build/dartaotruntime_linux_$2" "dartaotruntime_linux_$2" && chmod a+x "dartaotruntime_linux_$2" && cp "/build/gen_snapshot_linux_$1_linux_$2" "gen_snapshot_linux_$1_linux_$2" && chmod a+x "gen_snapshot_linux_$1_linux_$2"; fi' -- "$SDK_ARCH"
