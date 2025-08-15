@@ -21,7 +21,10 @@ RUN --mount=type=bind,source=.,target=/build \
     esac \
  && tar -xzf /build/dartsdk-linux-$SDK_ARCH-release.tar.gz \
  && mv dart-sdk "$DART_SDK" \
+ && [ "$SDK_ARCH" != arm ] \
+ || exit 0 \
  && DART_SDK_CACHE="$HOME/.dart/dartdev/sdk_cache/$(cat "$DART_SDK/version")" \
  && mkdir -p "$DART_SDK_CACHE" \
  && cd "$DART_SDK_CACHE" \
- && echo x64 arm64 arm riscv64 | xargs -n 1 sh -c 'if [ "$1" != arm ] && [ "$1" != "$2" ]; then cp "/build/dartaotruntime_linux_$2" "dartaotruntime_linux_$2" && chmod a+x "dartaotruntime_linux_$2" && cp "/build/gen_snapshot_linux_$1_linux_$2" "gen_snapshot_linux_$1_linux_$2" && chmod a+x "gen_snapshot_linux_$1_linux_$2"; fi' -- "$SDK_ARCH"
+ && find /build \( -name "dartaotruntime_*" -o -name "gen_snapshot_linux_${SDK_ARCH}_*" \) -not -name "dartaotruntime_linux_${SDK_ARCH}" -not -name "gen_snapshot_linux_${SDK_ARCH}_linux_${S
+DK_ARCH}" -print0 | xargs -0 -n 1 -- sh -c 'cp "$1" "$(basename "$1")" && chmod a+x "$(basename "$1")"' --
