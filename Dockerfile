@@ -26,5 +26,4 @@ RUN --mount=type=bind,source=.,target=/build \
  && DART_SDK_CACHE="$HOME/.dart/dartdev/sdk_cache/$(cat "$DART_SDK/version")" \
  && mkdir -p "$DART_SDK_CACHE" \
  && cd "$DART_SDK_CACHE" \
- && find /build \( -name "dartaotruntime_*" -o -name "gen_snapshot_linux_${SDK_ARCH}_*" \) -not -name "dartaotruntime_linux_${SDK_ARCH}" -not -name "gen_snapshot_linux_${SDK_ARCH}_linux_${S
-DK_ARCH}" -print0 | xargs -0 -n 1 -- sh -c 'cp "$1" "$(basename "$1")" && chmod a+x "$(basename "$1")"' --
+ && find /build \( -name "dartaotruntime_*" -o -name "gen_snapshot_linux_${SDK_ARCH}_*" \) -not -name "dartaotruntime_linux_${SDK_ARCH}" -not -name "gen_snapshot_linux_${SDK_ARCH}_linux_${SDK_ARCH}" -print0 | xargs -0 -n 1 -- sh -c 'cp "$1" "$(basename "$1")" && chmod a+x "$(basename "$1")"' --
