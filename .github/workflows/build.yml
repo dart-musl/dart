@@ -159,8 +159,8 @@ jobs:
         with:
           subject-path: |
             dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz
-            dartaotruntime_linux_*
-            gen_snapshot_linux_*
+            dartaotruntime_linux_${{ matrix.target-arch }}
+            gen_snapshot_linux_${{ matrix.target-arch }}_*
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -168,8 +168,8 @@ jobs:
           name: dartsdk-linux-${{ matrix.target-arch }}-${{ inputs.ref }}
           path: |
             dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz
-            dartaotruntime_linux_*
-            gen_snapshot_linux_*
+            dartaotruntime_linux_${{ matrix.target-arch }}
+            gen_snapshot_linux_${{ matrix.target-arch }}_*
           if-no-files-found: error
           compression-level: 0
 
