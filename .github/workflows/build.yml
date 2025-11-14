@@ -125,6 +125,7 @@ jobs:
       - name: Unarchive
         run: |
           tar -xzf dart-${{ inputs.ref }}-${{ matrix.host-arch }}.tar.gz
+          rm dart-${{ inputs.ref }}-${{ matrix.host-arch }}.tar.gz
 
       - name: Verify Checked-in Dart SDK
         run: |
