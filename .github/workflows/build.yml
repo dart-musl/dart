@@ -118,7 +118,7 @@ jobs:
         uses: dart-musl/setup-node-alpine-for-javascript-actions@v1
 
       - name: Download Artifact
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: dart-${{ inputs.ref }}-${{ matrix.host-arch }}
 
