@@ -80,7 +80,7 @@ jobs:
           tar -czf dart-${{ inputs.ref }}-${{ matrix.host-arch }}.tar.gz dart-sdk
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: dart-${{ inputs.ref }}-${{ matrix.host-arch }}
           path: dart-${{ inputs.ref }}-${{ matrix.host-arch }}.tar.gz
@@ -164,7 +164,7 @@ jobs:
             gen_snapshot_linux_${{ matrix.target-arch }}_*
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: dartsdk-linux-${{ matrix.target-arch }}-${{ inputs.ref }}
           path: |
