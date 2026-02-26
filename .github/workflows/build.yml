@@ -154,9 +154,9 @@ jobs:
           tar -czf dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz -C dart-sdk/sdk/out/Release* -- dart-sdk
           find dart-sdk/sdk/out/Release*/exe.stripped \( -name dartaotruntime_product -o -name 'gen_snapshot_product_*' \) -not -name gen_snapshot_product_linux_${{ matrix.target-arch }} -print0 | xargs -0 -n 1 -- sh -c 'cp "$1" "$(basename "$1" | sed -e "s/product/linux_${{ matrix.target-arch }}/")"' --
 
-      - name: Generate artifact attestation
+      - name: Attest
         if: github.ref_type == 'tag'
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest@v4
         with:
           subject-path: |
             dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz
