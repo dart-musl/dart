@@ -156,7 +156,7 @@ jobs:
 
       - name: Attest
         if: github.ref_type == 'tag'
-        uses: actions/attest@v4
+        uses: actions/attest@v4.2.0
         with:
           subject-path: |
             dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz
