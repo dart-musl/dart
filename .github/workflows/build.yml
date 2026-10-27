@@ -41,7 +41,7 @@ jobs:
 
       - name: Fetch Dart SDK
         run: |
-          git clone --branch b86fc981b72ab966f8260f73b4eca600b3b12677 --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
+          git clone --revision b86fc981b72ab966f8260f73b4eca600b3b12677 --depth 1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
           export DEPOT_TOOLS_UPDATE=0 PATH=$PWD/depot_tools:$PATH
 
           mkdir dart-sdk
