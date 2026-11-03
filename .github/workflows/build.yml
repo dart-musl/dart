@@ -70,7 +70,9 @@ jobs:
       - name: Remove build tools
         run: |
           cd dart-sdk/sdk
+          tar -cf ../../buildtools.tar buildtools/linux-${{ matrix.host-arch }}/clang/.versions/clang.cipd_version
           rm -rf buildtools
+          tar -xf ../../buildtools.tar
           mkdir -p buildtools/ninja buildtools/sysroot
           ln -s /usr/bin/gn buildtools/gn
           ln -s /usr/bin/ninja buildtools/ninja/ninja
