@@ -151,6 +151,12 @@ jobs:
           cd dart-sdk/sdk
           ./tools/build.py --mode release --arch ${{ matrix.target-arch }} --gn-args 'dart_sysroot="alpine"' create_sdk
 
+      - name: Debug
+        if: failure()
+        run: |
+          cd dart-sdk/sdk
+          cat ./out/Release*/siso_output
+
       - name: Archive
         run: |
           tar -czf dartsdk-linux-${{ matrix.target-arch }}-release.tar.gz -C dart-sdk/sdk/out/Release* -- dart-sdk
