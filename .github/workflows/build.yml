@@ -17,7 +17,7 @@ on:
 
 jobs:
   archive:
-    runs-on: ${{ matrix.host-arch == 'arm64' && 'ubuntu-24.04-arm' || matrix.host-arch == 'x64' && 'ubuntu-latest' || null }}
+    runs-on: ${{ matrix.host-arch == 'arm64' && 'ubuntu-26.04-arm' || matrix.host-arch == 'x64' && 'ubuntu-latest' || null }}
 
     container:
       image: docker.io/library/debian
@@ -92,7 +92,7 @@ jobs:
   build:
     needs: [archive]
 
-    runs-on: ${{ matrix.host-arch == 'arm64' && 'ubuntu-24.04-arm' || matrix.host-arch == 'x64' && 'ubuntu-latest' || null }}
+    runs-on: ${{ matrix.host-arch == 'arm64' && 'ubuntu-26.04-arm' || matrix.host-arch == 'x64' && 'ubuntu-latest' || null }}
 
     permissions:
       actions: write
